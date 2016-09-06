@@ -34,10 +34,8 @@ let main = ({ DOM, socket }) => {
     .withLatestFrom(channelPoint$)
     .map(([ _, channelPoint ]) => ({ action: 'settle', channelPoint }))
 
-
   let actions$ = O.merge(pay$, settle$)
-    .withLatestFrom(props$)
-    .map(([ action, props ]) => [ 'rpc', merge(action, { client: props.client }) ])
+    .withLatestFrom(props$, (action, props) => [ 'rpc', merge(action, { client: props.client }) ])
 
   // View
   let vtree$ = O.combineLatest(blockHeight$, channelPoint$, balance$)
