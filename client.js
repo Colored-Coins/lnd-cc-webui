@@ -9,8 +9,7 @@ window.mdebug = require('debug')('LnCC')
 const merge = (...xs) => Object.assign({}, ...xs)
 const byName = name => x => x.name === name
 
-let main = ({ DOM, socket }) => {
-  let props$ = O.just({ client: location.hash.substr(1) })
+let main = ({ DOM, socket, props$ }) => {
 
   let log$ = socket.events('log')
     .withLatestFrom(props$)
@@ -56,6 +55,7 @@ let makeSocketDriver = socket => out$ => (
   { events: name => O.fromEvent(socket, name) }
 )
 Cycle.run(main, {
-  DOM: makeDOMDriver('#app'),
-  socket: makeSocketDriver(io(location.origin, { transports: [  'websocket' ] }))
+  DOM: makeDOMDriver('#app')
+, socket: makeSocketDriver(io(location.origin, { transports: [ 'websocket' ] }))
+, props$: _ => O.just({ client: location.hash.substr(1) })
 })
