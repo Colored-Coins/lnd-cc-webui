@@ -26,12 +26,10 @@ let main = ({ DOM, socket, props$ }) => {
 
   // Intent
   let pay$ = DOM.select('button.pay').events('click')
-    .map(ev => ev.target.value)
-    .map(amount => ({ action: 'pay', amount }))
+    .map(ev => ({ action: 'pay', amount: ev.target.value }))
 
   let settle$ = DOM.select('button.settle').events('click')
-    .withLatestFrom(channelPoint$)
-    .map(([ _, channelPoint ]) => ({ action: 'settle', channelPoint }))
+    .withLatestFrom(channelPoint$, (_, channelPoint) => ({ action: 'settle', channelPoint }))
 
   let actions$ = O.merge(pay$, settle$)
     .withLatestFrom(props$, (action, props) => [ 'rpc', merge(action, { client: props.client }) ])
