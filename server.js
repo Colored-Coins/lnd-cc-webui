@@ -21,7 +21,7 @@ const debug = require('debug')('LnCC')
 const lnClients = {
   bob:   new Lightning(process.env.BOB_LNRPC, grpc.credentials.createInsecure())
 , alice: new Lightning(process.env.ALICE_LNRPC, grpc.credentials.createInsecure())
-}, nodeIds = {}, otherMap = { bob: 'alice', alice: 'bob' }
+}, nodeIds = {}, otherMap = { bob: 'alice', alice: 'bob' }, sendCalls={}
 
 // Load lightning_id for all clients
 Object.keys(lnClients).forEach(
@@ -53,16 +53,14 @@ const server = http.Server(app)
 
 // RPC action handlers
 const rpcActions = {
-  pay: a => {
-    const call = lnClients[a.client].sendPayment()
-    call.write(new SendRequest(nodeIds[otherMap[a.client]], +a.amount))
-    call.end()
-    return RxNode.fromStream(call)
+  pay: (client, req) => {
+    let isNew = false, call = sendCalls[req.client] || (isNew = true, sendCalls[req.client] = client.sendPayment())
+    call.write(new SendRequest(nodeIds[otherMap[req.client]], +req.amount))
+    return isNew ? RxNode.fromStream(call) : O.empty()
   }
-, settle: a => {
-    const request = new CloseChannelRequest(toChannelPoint(a.channelPoint))
-        , call = lnClients[a.client].closeChannel(request)
-    return RxNode.fromStream(call)
+, settle: (client, req) => {
+    const request = new CloseChannelRequest(toChannelPoint(req.channelPoint))
+    return RxNode.fromStream(client.closeChannel(request))
   }
 }
 
@@ -72,7 +70,7 @@ io.set('transports', ['websocket'])
 io.addEventListener = io.on // hack for RxJS compatibility
 
 const rpcRequest$ = O.fromEvent(io, 'connection').flatMap(socket => O.fromEvent(socket, 'rpc'))
-const rpcReply$ = rpcRequest$.flatMap(req => rpcActions[req.action](req))
+const rpcReply$ = rpcRequest$.flatMap(req => rpcActions[req.action](lnClients[req.client], req))
 
 dbg('rpcRequest$', rpcRequest$)
 dbg('rpcReply$', rpcReply$)
