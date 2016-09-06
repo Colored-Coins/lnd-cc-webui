@@ -15,39 +15,39 @@ let main = ({ DOM, socket }) => {
   let log$ = socket.events('log')
     .withLatestFrom(props$)
     .filter(([ log, props ]) => log.client == props.client)
-		.map(([ log, _ ]) => log)
-	dbg('log$', log$)
+    .map(([ log, _ ]) => log)
+  dbg('log$', log$)
 
-	// Model
-	let channelPoint$ = log$.filter(byName('channelpoint'))
-		.map(({ txid, index }) => ({ txid, index  }))
-		.startWith({ txid: 'N/A', index: 'N/A' })
-	let blockHeight$ = log$.filter(byName('block')).map(l => l.height).startWith('N/A')
-	let balance$ = log$.filter(byName('balance')).startWith({ ourBalance: 'N/A', theirBalance: 'N/A' })
+  // Model
+  let channelPoint$ = log$.filter(byName('channelpoint'))
+    .map(({ txid, index }) => ({ txid, index  }))
+    .startWith({ txid: 'N/A', index: 'N/A' })
+  let blockHeight$ = log$.filter(byName('block')).map(l => l.height).startWith('N/A')
+  let balance$ = log$.filter(byName('balance')).startWith({ ourBalance: 'N/A', theirBalance: 'N/A' })
 
-	// Intent
+  // Intent
   let pay$ = DOM.select('button.pay').events('click')
-	  .map(ev => ev.target.value)
-		.map(amount => ({ action: 'pay', amount }))
+    .map(ev => ev.target.value)
+    .map(amount => ({ action: 'pay', amount }))
 
   let settle$ = DOM.select('button.settle').events('click')
-		.withLatestFrom(channelPoint$)
-		.map(([ _, channelPoint ]) => ({ action: 'settle', channelPoint }))
+    .withLatestFrom(channelPoint$)
+    .map(([ _, channelPoint ]) => ({ action: 'settle', channelPoint }))
 
 
-	let actions$ = O.merge(pay$, settle$)
-		.withLatestFrom(props$)
-		.map(([ action, props ]) => [ 'rpc', merge(action, { client: props.client }) ])
+  let actions$ = O.merge(pay$, settle$)
+    .withLatestFrom(props$)
+    .map(([ action, props ]) => [ 'rpc', merge(action, { client: props.client }) ])
 
-	// View
+  // View
   let vtree$ = O.combineLatest(blockHeight$, channelPoint$, balance$)
     .map(([ blockHeight, channelPoint, balance ]) => div([
-			pre(JSON.stringify({ channelPoint: channelPoint, blockHeight: blockHeight, ourBalance: balance.ourBalance, theirBalance: balance.theirBalance }, '\t', 2)),
-			button('.pay', { value: 1 }, 'Send 1 CC'), ' ',
-			button('.pay', { value: 5 }, 'Send 5 CC'), ' ',
-			button('.pay', { value: 10 }, 'Send 10 CC'), ' ',
-			br(), br(),
-			button('.settle', { }, 'Settle on-chain'), ' ',
+      pre(JSON.stringify({ channelPoint: channelPoint, blockHeight: blockHeight, ourBalance: balance.ourBalance, theirBalance: balance.theirBalance }, '\t', 2)),
+      button('.pay', { value: 1 }, 'Send 1 CC'), ' ',
+      button('.pay', { value: 5 }, 'Send 5 CC'), ' ',
+      button('.pay', { value: 10 }, 'Send 10 CC'), ' ',
+      br(), br(),
+      button('.settle', { }, 'Settle on-chain'), ' ',
     ]))
 
   return { DOM: vtree$, socket: actions$ }
