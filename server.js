@@ -6,7 +6,7 @@ import { throwerr, printerr } from 'iferr'
 import grpc from 'grpc'
 import { dbgStreams } from './util'
 
-require('longjohn')
+process.env.NODE_ENV != 'production' && require('longjohn')
 
 const manager_uri = process.env.LND_ORCHESTRATOR_URI
 
