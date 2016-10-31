@@ -27,9 +27,9 @@ Object.assign(app.locals, { url: process.env.URL, static_url: process.env.STATIC
 app.use(require('morgan')('dev'))
 
 app.get('/', (req, res) => res.render(__dirname+'/index.jade'))
-app.get('/-/-.js', require('browserify-middleware')(__dirname + '/client.js'))
-app.get('/-/-.css', require('stylus').middleware({ src: _ => __dirname+'/style.styl', dest: _ => __dirname+'/static/-.css' }))
-app.use('/-', express.static(__dirname + '/static'))
+app.get('/-.js', require('browserify-middleware')(__dirname + '/client.js'))
+app.get('/-.css', require('stylus').middleware({ src: _ => __dirname+'/style.styl', dest: _ => __dirname+'/static/-.css' }))
+app.use('/', express.static(__dirname + '/static'))
 
 // Setup Socket.io
 io.set('transports', [ 'websocket' ])
