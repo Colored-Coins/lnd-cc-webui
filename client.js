@@ -65,7 +65,7 @@ run(main, {
   DOM:      makeDOMDriver('#app')
 , socket:   makeSocketDriver(io(location.origin, { transports: [ 'websocket' ] }))
 , history$: makeHistoryDriver(createHistory({ hashType: 'noslash' }))
-, props$:   _ => O.just({ asset: 'BTC' })
+, props$:   _ => O.just({ asset: 'USD' })
 })
 
 
