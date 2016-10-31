@@ -1,7 +1,8 @@
 import { Observable as O } from 'rx'
 import { randomBytes } from 'crypto'
 
-const debug = require('debug')('LnCC')
+const Debug = require('debug')
+    , debug = Debug('LnCC')
 
 export const makeSocketDriver = socket => out$ => (
   out$.subscribe(a => socket.emit(...a)),
@@ -17,5 +18,5 @@ const dbgStream = (label, o$) => o$.subscribe(
   () => debug(`${label} completed`)
 )
 
-// expose debug object, call `mdebug.enable()` to enable it
-if (typeof window != 'undefined') window.mdebug = debug
+// expose debug object, call `Debug.enable()` to enable it
+if (typeof window != 'undefined') window.Debug = Debug
