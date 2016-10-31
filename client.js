@@ -1,50 +1,80 @@
 import Rx, { Observable as O } from 'rx'
-import Cycle from '@cycle/core'
-import { makeDOMDriver, div, pre, button, br, p, small } from '@cycle/dom'
+import { run } from '@cycle/rx-run'
 import io from 'socket.io-client'
-import dbg from './dbg-stream'
+import { makeDOMDriver, div, header, form, span, strong, input, label, button, ul, li, h2, h3, h4, p } from '@cycle/dom'
+import { makeHistoryDriver } from '@cycle/history'
+import { createHashHistory as createHistory } from 'history'
+import { makeSocketDriver, dbgStreams, makeWid } from './util'
 
-const makeSocketDriver = socket => out$ => (
-  out$.subscribe(a => socket.emit(...a)),
-  { events: O.fromEvent.bind(O, socket) })
+import loadingView from './views/loading'
+import headerView  from './views/header'
+import paymentView from './views/payment'
+import eventsView  from './views/events'
 
-const main = ({ DOM, socket, props$ }) => {
+const ID = x => x
+
+const main = ({ DOM, history$, socket, props$ }) => {
   const
 
-  // Filter for events of `name`for the currently active client
-  valOf = name => socket.events('log')
-    .withLatestFrom(props$)
-    .flatMap(([ ev, p ]) => ev[0] == p.client && ev[1] == name ? O.just(ev[2]) : O.empty())
+  // Get events of type `t` with the type stripped and the data transformed with `mapper`
+  evStream = (t, mapper=ID) => event$.filter(x => x[0] == t).map(x => mapper(...x.slice(1)))
 
   // Model
-, point$   = valOf('outpoint').map(point => `${point.txid.substr(0,10)}:${point.index}`).startWith(undefined)
-, height$  = valOf('height').startWith(undefined)
-, bench$   = valOf('benchmark').withLatestFrom(props$, (b, p) => `${b.tps} tx/sec: sent ${b.sent} ${p.asset}, received ${b.recv} ${p.asset} in the last ${b.timeframe}`).startWith(undefined)
-, balance$ = valOf('balance').startWith(undefined)
+, wid$     = history$.map(l => l.pathname.replace(/^\//, '')).distinctUntilChanged()
+, event$   = socket.events('event', (...e) => e)
+, events$  = event$.scan((events, e) => [ e, ...events ], [])
+, wallet$  = evStream('wallet', w => w).startWith({})
+, height$  = evStream('accept', c => c.height).startWith(0)
+, openCh$  = evStream('ch_open', c => c.outpoint).scan((xs, x) => [ ...xs, x ], []).startWith([])
+, balance$ = O.merge(
+    wallet$.filter(w => !!w.balance).map(w => w.balance)
+  , evStream('balance', b => b.channelbalance)
+  , evStream('chain', c => c.ourBalance)
+  ).startWith('0').distinctUntilChanged()
+//, logMap$ = evStream('accept').scan((o, c) => (o.o[c.ourIndex]=c, o.t[c.theirIndex]=c, o), {o:{}, t:{}}).startWith({o:{}, t:{}})
+, stateMap$ = evStream('accept').scan((o, c) => (o[c.height]=c, o), {}).startWith({})
+
+//, point$   = valOf('outpoint').map(point => `${point.txid.substr(0,10)}:${point.index}`).startWith(undefined)
+//, bench$   = valOf('benchmark').withLatestFrom(props$, (b, p) => `${b.tps} tx/sec: sent ${b.sent} ${p.asset}, received ${b.recv} ${p.asset} in the last ${b.timeframe}`).startWith(undefined)
 
   // Intent
-, pay$    = DOM.select('.pay').events('click').map(ev => [ 'pay', ev.target.value ])
-, settle$ = DOM.select('.settle').events('click').withLatestFrom(point$, (_, point) => [ 'settle', point ])
-, out$    = O.merge(pay$, settle$).withLatestFrom(props$, (action, p) => [ 'rpc', p.client, ...action ])
-
-  // View
-, vtree$ = O.combineLatest(point$, height$, balance$, bench$, props$)
-    .map(([ point, height, balance, bench, props ]) => div([
-     balance ? pre(JSON.stringify(balance, '\t', 2)) : null
-    , [ 1, 5, 10 ].map(value => [ button('.pay', { value }, `Send ${value} ${props.asset}`), ' ' ])
-    , br(), br()
-    , button('.settle', 'Settle on-chain')
-    , (point && height) ? [' ', small(null, `commitment #${ height } on ChannelPoint(${ point }) `) ] : null
-    , bench ? [ br(), p(small(null, `benchmark: ${bench}`))] : null
-    ]))
+, provis$  = wid$.filter(wid => !wid).map([ 'provision' ])
+, assoc$   = wid$.withLatestFrom(wallet$).filter(([ wid, wallet]) => wid && wallet.wid != wid).map(([ wid ]) => [ 'associate', wid ])
+, pay$     = DOM.select('.send-payment').events('submit').do(e => e.preventDefault()).withLatestFrom(wid$)
+               .map(([ { target: t }, wid ]) => (console.log({t,wid}),[ 'pay', wid, t.querySelector('[name=dest]').value, t.querySelector('[name=amount]').value ]))
+, settle$  = DOM.select('.settle').events('click').map([ 'settle' ])
+, cmd$     = O.merge(provis$, assoc$, pay$, settle$)
 
   // Sinks
-  dbg({ point$, height$, balance$, bench$, out$ })
-  return { DOM: vtree$, socket: out$ }
+, vtree$ = O.combineLatest(wid$, wallet$, balance$, height$, events$, openCh$, stateMap$, props$)
+    .map(([ wid, wallet, balance, height, events, openCh, stateMap, props ]) => !wallet.idpub ? loadingView() : div([
+      headerView({ wallet, props, balance })
+    , paymentView({ wallet, props })
+    , eventsView({ events, wallet, height, openCh, stateMap, props })
+    // div('.container', button('.btn.btn-default.settle', 'Close channel & settle on-chain'))
+    ]))
+
+//, location$ = evStream('provisioned', wid => ({ pathname: wid }))
+, location$ = wallet$.withLatestFrom(wid$).filter(([ wallet, wid ]) => wallet.wid && wallet.wid != wid).map(([ { wid } ]) => ({ pathname: wid }))
+
+  dbgStreams({ wid$, event$, wallet$, height$, openCh$, balance$, cmd$, location$, history$, pay$ })
+  return { DOM: vtree$, socket: cmd$, history$: location$ }
 }
 
-Cycle.run(main, {
-  DOM: makeDOMDriver('#app')
-, socket: makeSocketDriver(io(location.origin, { transports: [ 'websocket' ] }))
-, props$: _ => O.just({ client: location.hash.substr(1), asset: 'CC' })
+run(main, {
+  DOM:      makeDOMDriver('#app')
+, socket:   makeSocketDriver(io(location.origin, { transports: [ 'websocket' ] }))
+, history$: makeHistoryDriver(createHistory({ hashType: 'noslash' }))
+, props$:   _ => O.just({ asset: 'BTC' })
 })
+
+
+
+    /*.map(([ point, height, balance, bench, props ]) => div([*/
+      //balance ? pre(JSON.stringify(balance, '\t', 2)) : null
+    //, [ 1, 5, 10 ].map(value => [ button('.pay', { value }, `Send ${value} ${props.asset}`), ' ' ])
+    //, br(), br()
+    //, button('.settle', 'Settle on-chain')
+    //, (point && height) ? [' ', small(null, `commitment #${ height } on ChannelPoint(${ point }) `) ] : null
+    //, bench ? [ br(), p(small(null, `benchmark: ${bench}`))] : null
+    /*]))*/

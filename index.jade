@@ -1,0 +1,21 @@
+mixin js(path)
+  script(src=static_url+'/'+path+'.js?'+version)
+
+mixin css(path)
+  link(href=static_url+'/'+path+'.css?'+version, type='text/css', rel='stylesheet')
+
+html
+  head
+    block head
+      meta(charset='utf-8')
+      meta(http-equiv='X-UA-Compatible', content='IE=edge')
+      meta(name='viewport', content='width=device-width, initial-scale=1')
+
+      title Colored Coins LN
+      +css('bootstrap/css/bootstrap.min')
+      +css('-')
+  body
+    nav.navbar.navbar-default: .container
+      .navbar-header: a.navbar-brand(href='#') Colu BTC wallet
+    #app
+    +js('-')

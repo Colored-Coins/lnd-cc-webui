@@ -1,0 +1,112 @@
+.clearfix
+  clear both
+
+h1, h2, h3, h4, h5
+  font-weight normal
+
+.lnid
+  word-break break-all
+
+.navbar
+  margin-bottom 0
+  border-bottom 0
+  border-radius 4px 4px 0px 0px
+
+.navbar-header
+  width 100%
+  text-align center
+  padding 15px
+
+.navbar-brand
+  float none
+
+header.overview
+  padding 20px 0 40px 0
+  margin-bottom 20px
+  border-radius 0px 0px 6px 6px
+  border-color #d34615
+  border-top 0px
+  background-color #e95420
+  text-align center
+  color #fff
+  font-size 3em
+
+  .balance
+    padding-top 0
+    background transparent
+    border-radius 0
+    font-weight lighter
+
+    .amount
+      font-size 2em
+
+    h2, p
+      margin 0
+      line-height 1
+
+.send-payment
+  p
+    font-size 1.4em
+    text-align center
+
+.events
+  ul
+    list-style-type none
+    padding-left 0
+  li
+    position relative
+
+    .glyphicon
+      opacity 0.65
+      float left
+      margin 10px 5px 0 0
+      font-size 2em
+    h4
+      margin 0 0 15px 0
+      font-size 1.4em
+
+    .prim
+      float left
+      margin-top 10px
+      > p
+        font-size 1.2em
+      p
+        a, a:hover, a:active, a:focus
+          color inherit
+          text-decoration underline
+        em
+          font-style normal
+          color #888
+
+    .meta
+      float right
+      text-align right
+      p
+        margin 0
+      .label
+        margin-top 13px
+        font-size 1em
+        //-webkit-transition 1s ease-in-out
+        //-moz-transition 1s ease-in-out
+        //-o-transition 1s ease-in-out
+        transition 1s ease-in-out
+        display block
+        font-weight normal
+        padding .4em
+
+    h4 .amount
+      //vertical-align middle
+      color #c09853
+      .num
+        font-size 1.2em
+
+
+    &.sent
+      .glyphicon, h4 .amount
+        color #bc271c
+
+    &.recv
+      .glyphicon, h4 .amount
+        color #38b44a
+      .glyphicon
+        transform rotate(180deg)

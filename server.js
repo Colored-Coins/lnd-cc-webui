@@ -1,71 +1,77 @@
 import express from 'express'
-import socketio from 'socket.io'
-import http from 'http'
-import browserify from 'browserify-middleware'
-import Rx, { Observable as O } from 'rx'
-import RxNode, { fromStream } from 'rx-node'
+import { Observable as O } from 'rx'
+import only from 'only'
+import request from 'superagent'
 import { throwerr, printerr } from 'iferr'
 import grpc from 'grpc'
-import lnrpc from 'lnrpc'
-import logstream from 'lnd-logstream'
-import dbg from './dbg-stream'
+import { dbgStreams } from './util'
 
-const toChannelPoint = ({ txid, index }) => new ChannelPoint(new Buffer(txid, 'hex'), +index)
-    , { Lightning, SendRequest, CloseChannelRequest, ChannelPoint, GetInfoRequest } = lnrpc
+require('longjohn')
 
-// Setup LN RPC clients
-const lnClients = {
-  bob:   new Lightning(process.env.BOB_LNRPC, grpc.credentials.createInsecure())
-, alice: new Lightning(process.env.ALICE_LNRPC, grpc.credentials.createInsecure()) }
-;((a, b) => (a._other=b, b._other=a))(lnClients.bob, lnClients.alice)
+const manager_uri = process.env.LND_ORCHESTRATOR_URI
 
-// Load lightning_id for all clients
-Object.keys(lnClients).forEach(
-    k => lnClients[k].getInfo(new GetInfoRequest, throwerr(
-        info => lnClients[k]._lightning_id = new Buffer(info.lightning_id, 'hex'))))
+// Initalize Express, Socket.io & Redis
+, app   = express()
+, http  = require('http').Server(app)
+, io    = require('socket.io')(http)
+, rread = require('redis').createClient(process.env.REDIS_URI)
 
-// Setup a merged log stream for all clients, prepending the source client to the event tuple
-const log$ = O.merge(
-  logstream(process.env.BOB_LOG).map(ev => [ 'bob', ...ev ])
-, logstream(process.env.ALICE_LOG).map(ev => [ 'alice', ...ev ]))
+// Model
+, { walletEvents } = require('./model')(rread)
 
-// Express-based HTTP interface
-const app = express()
-    , server = http.Server(app)
-
+// Setup Express
 app.set('port', process.env.PORT || 9000)
-app.set('view engine', 'jade')
-app.set('views', __dirname + '/views')
+Object.assign(app.locals, { url: process.env.URL, static_url: process.env.STATIC_URL, version: process.env.VER})
 
 app.use(require('morgan')('dev'))
 
-app.get('/', (req, res) => res.render('index'))
-app.get('/_.js', browserify(__dirname + '/client.js'))
-app.use('/_', express.static(__dirname + '/static'))
+app.get('/', (req, res) => res.render(__dirname+'/index.jade'))
+app.get('/-/-.js', require('browserify-middleware')(__dirname + '/client.js'))
+app.get('/-/-.css', require('stylus').middleware({ src: _ => __dirname+'/style.styl', dest: _ => __dirname+'/static/-.css' }))
+app.use('/-', express.static(__dirname + '/static'))
 
-// Socket.io-based WebSocket interface
-const io = socketio(server)
-io.set('transports', ['websocket'])
-io.addEventListener = io.on // hack for RxJS compatibility
+// Setup Socket.io
+io.set('transports', [ 'websocket' ])
+io.addEventListener = io.on // hack for RxJS compatibility @XXX ensure that unsubscribing works too
 
-// RPC actions
-const rpcActions = {
-  pay: (c, amount) => {
-    let isNew = false, stream = c._sendStream || (isNew = true, c._sendStream = c.sendPayment())
-    stream.write(new SendRequest(c._other._lightning_id, +amount))
-    return isNew ? fromStream(stream) : O.empty()
-  }
-, settle: (client, point) => fromStream(client.closeChannel(new CloseChannelRequest(toChannelPoint(point))))
-}
+const
 
-// make a stream of incoming RPC requests, execute them and transform to a stream of RPC responses
-const rpcRequest$ = O.fromEvent(io, 'connection').flatMap(socket => O.fromEvent(socket, 'rpc', (...a) => a)).share()
-    , rpcReply$   = rpcRequest$.flatMap(([ client, action, ...a ]) => rpcActions[action](lnClients[client], ...a)).share()
+  socketStream = name => conn$.flatMap(s => O.fromEvent(s, name, (...a) => (console.log('socketstream',name,...a),[ s.id, ...a ]))).share()
 
-// Announce ln log events & RPC replies to all clients (they're responsible for filtering the ones they care about)
-log$.subscribe(ev => io.emit('log', ev))
-rpcReply$.subscribe(r => io.emit('rpcReply', r))
+// Intent
+, conn$   = O.fromEvent(io, 'connection').share()
+, provis$ = conn$.flatMap(s => O.fromEvent(s, 'provision', _ => [ s.id ])).share()
+, assoc$  = conn$.flatMap(s => O.fromEvent(s, 'associate', wid => [ s.id, wid ])).share()
+, pay$    = socketStream('pay') // conn$.flatMap(s => O.fromEvent(s, 'pay', (...a) => [ s.id, ...a ])).share()
+, settle$ = conn$.flatMap(s => O.fromEvent(s, 'settle', wid => [ s.id, wid ])).share()
+, discon$ = conn$.flatMap(s => O.fromEvent(s, 'disconnect', reason => [ s.id, reason ])).share()
+
+// Translate intent to outgoing HTTP requests for lnd-orchestrator
+, httpReq$ = O.merge(
+    provis$.map(([ sid ])                    => [ sid, 'post', '/provision', null, r => [ 'provisioned', r.text ] ])
+  , assoc$.map (([ sid, wid ])               => [ sid, 'get',  `/w/${wid}`,  null, r => [ 'wallet', only(r.body, 'idpub balance') ] ])
+  , pay$.do(x=>console.log('pay',x)).map   (([ sid, wid, dest, amount ]) => [ sid, 'post', `/w/${wid}/pay`, { dest, amount } ])
+  , settle$.map(([ sid, wid ])               => [ sid, 'post', `/w/${wid}/settle` ])
+  )
+
+// Execute requests, transform results
+, httpRes$ = httpReq$.flatMap(([ sid, method, path, data, tr ]) =>
+    O.fromNodeCallback(request[method])(manager_uri+path, data).flatMap(resp => tr ? O.of([ sid, ...tr(resp) ]) : O.empty())
+  ).filter(e => !!e[1]).share()
+
+// Stream of subscription requests ([ sid, wid ]), either from the 'associate' command or automatically following wallet provisioning
+, subscribe$ = O.merge(assoc$, httpRes$.filter(x => x[1] == 'provisioned').map(([ sid, _, wid ]) => [ sid, wid ]))
+
+// Transform subscription request stream to a notification stream of [ sid, ev_type, ...data  ]
+, notification$ =  subscribe$.flatMap(([ sid, wid ]) => walletEvents(wid).map(e => [ sid, ...e ])) // @XXX leaky!
+
+// Socket.io emit stream, merges HTTP responses and notifications
+, emit$ = O.merge(httpRes$, notification$).map(([ sid, ...e ]) => [ sid, 'event', ...e  ])
+
+// Sinks
+emit$.subscribe(([ sid, ...e ]) => io.to(sid).emit(...e))
+
+dbgStreams({ /*conn$,*/ provis$, assoc$, pay$, settle$, discon$, httpReq$, httpRes$, subscribe$, notification$, emit$ })
 
 // Launch
-server.listen(app.get('port'), _ => console.log(`Listening on ${app.get('port')}`))
-dbg({ /*log$,*/ rpcRequest$, rpcReply$ })
+http.listen(app.get('port'), _ => console.log(`Listening on ${app.get('port')}`))
