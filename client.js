@@ -29,7 +29,7 @@ const main = ({ DOM, history$, socket, props$ }) => {
 , balance$ = O.merge(
     wallet$.filter(w => !!w.balance).map(w => w.balance)
   , evStream('balance', b => b.channelbalance)
-  , evStream('chain', c => c.ourBalance)
+  , evStream('accept', c => c.ourBalance)
   ).startWith('0').distinctUntilChanged()
 //, logMap$ = evStream('accept').scan((o, c) => (o.o[c.ourIndex]=c, o.t[c.theirIndex]=c, o), {o:{}, t:{}}).startWith({o:{}, t:{}})
 , stateMap$ = evStream('accept').scan((o, c) => (o[c.height]=c, o), {}).startWith({})
