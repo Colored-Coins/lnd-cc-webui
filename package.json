@@ -24,6 +24,7 @@
     "morgan": "^1.7.0",
     "move-decimal-point": "0.0.1",
     "only": "0.0.2",
+    "redis": "^2.6.2",
     "rx": "^4.1.0",
     "snabbdom-jsx": "^0.3.1",
     "socket.io": "^1.4.5",
