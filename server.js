@@ -21,6 +21,7 @@ const manager_uri = process.env.LND_ORCHESTRATOR_URI
 
 // Setup Express
 app.set('port', process.env.PORT || 9000)
+app.set('host', process.env.HOST || '127.0.0.1')
 Object.assign(app.locals, { url: process.env.URL, static_url: process.env.STATIC_URL, version: process.env.VER})
 
 app.use(require('morgan')('dev'))
@@ -74,4 +75,4 @@ emit$.subscribe(([ sid, ...e ]) => io.to(sid).emit(...e))
 dbgStreams({ /*conn$,*/ provis$, assoc$, pay$, settle$, discon$, httpReq$, httpRes$, subscribe$, notification$, emit$ })
 
 // Launch
-http.listen(app.get('port'), _ => console.log(`Listening on ${app.get('port')}`))
+http.listen(app.get('port'), app.get('host'), _ => console.log(`Listening on ${app.get('host')}:${app.get('port')}`))
