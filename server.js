@@ -51,7 +51,7 @@ const
 , httpReq$ = O.merge(
     provis$.map(([ sid ])                    => [ sid, 'post', '/provision', null, r => [ 'provisioned', r.text ] ])
   , assoc$.map (([ sid, wid ])               => [ sid, 'get',  `/w/${wid}`,  null, r => [ 'wallet', only(r.body, 'idpub balance') ] ])
-  , pay$.do(x=>console.log('pay',x)).map   (([ sid, wid, dest, amount ]) => [ sid, 'post', `/w/${wid}/pay`, { dest, amount } ])
+  , pay$.map   (([ sid, wid, dest, amount ]) => [ sid, 'post', `/w/${wid}/pay`, { dest, amount } ])
   , settle$.map(([ sid, wid ])               => [ sid, 'post', `/w/${wid}/settle` ])
   )
 
