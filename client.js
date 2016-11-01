@@ -43,7 +43,7 @@ const main = ({ DOM, history$, socket, props$ }) => {
              .merge(socket.events('reconnect').withLatestFrom(wid$, (_, wid) => wid))
              .map(wid => [ 'associate', wid ])
 , pay$     = DOM.select('.send-payment').events('submit').do(e => e.preventDefault()).withLatestFrom(wid$)
-               .map(([ { target: t }, wid ]) => (console.log({t,wid}),[ 'pay', wid, t.querySelector('[name=dest]').value, t.querySelector('[name=amount]').value ]))
+               .map(([ { target: t }, wid ]) => [ 'pay', wid, t.querySelector('[name=dest]').value, t.querySelector('[name=amount]').value ])
 , settle$  = DOM.select('.settle').events('click').map([ 'settle' ])
 , cmd$     = O.merge(provis$, assoc$, pay$, settle$)
 
