@@ -22,7 +22,7 @@ const main = ({ DOM, history$, socket, props$ }) => {
   // Model
 , wid$     = history$.map(l => l.pathname.replace(/^\//, '')).distinctUntilChanged()
 , event$   = socket.events('event', (...e) => e)
-, events$  = event$.scan((events, e) => [ e, ...events ], [])
+, events$  = event$.scan((events, e) => e[0] == 'init' ? [ e ] : [ e, ...events ], [])
 , wallet$  = evStream('wallet', w => w).startWith({})
 , height$  = evStream('accept', c => c.height).startWith(0)
 , openCh$  = evStream('ch_open', c => c.outpoint).scan((xs, x) => [ ...xs, x ], []).startWith([])
