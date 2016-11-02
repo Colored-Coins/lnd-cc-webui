@@ -60,7 +60,6 @@ const
 , httpRes$ = httpReq$.flatMap(([ sid, method, path, data, tr ]) =>
     O.fromNodeCallback(request[method])(manager_uri+path, data)
       .flatMap(resp => tr ? O.of([ sid, ...tr(resp) ]) : O.empty())
-      .doOnError(err => console.error({ message: err.message, res: err.response }))
       .catch(err => O.of([ sid, 'error', formatError(err) ] ))
   ).share()
 

@@ -19,7 +19,11 @@ const dbgStream = (label, o$) => o$.subscribe(
 )
 
 export const errorFormatter = app => err =>
-  (err.response && err.response.body || err.response.text) || (app.settings.env == 'development' && err.stack) || err.message || err
+  (err.response && (nonEmptyObj(err.response.body) ? err.response.body : err.response.text)) ||
+  (app.settings.env == 'development' && err.stack) ||
+  err.message || err
+
+const nonEmptyObj = obj => obj && Object.keys(obj).length
 
 // expose debug object, call `Debug.enable()` to enable it
 if (typeof window != 'undefined') window.Debug = Debug
