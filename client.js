@@ -23,7 +23,7 @@ const main = ({ DOM, history$, socket, props$ }) => {
 , wid$     = history$.map(l => l.pathname.replace(/^\//, '')).distinctUntilChanged()
 , event$   = socket.events('event', (...e) => e)
 , events$  = event$.scan((events, e) => e[0] == 'init' ? [ e ] : [ e, ...events ], [])
-, wallet$  = evStream('wallet', w => w).startWith({})
+, wallet$  = O.merge(evStream('wallet', w => w), evStream('init', _ => ({}))).startWith({})
 , height$  = evStream('accept', c => c.height).startWith(0)
 , openCh$  = evStream('ch_open', c => c.outpoint).scan((xs, x) => [ ...xs, x ], []).startWith([])
 , balance$ = O.merge(
