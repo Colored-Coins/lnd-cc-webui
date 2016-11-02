@@ -4,7 +4,7 @@ import only from 'only'
 import request from 'superagent'
 import { throwerr, printerr } from 'iferr'
 import grpc from 'grpc'
-import { dbgStreams } from './util'
+import { dbgStreams, errorFormatter } from './util'
 
 process.env.NODE_ENV != 'production' && require('longjohn')
 
@@ -38,6 +38,7 @@ io.addEventListener = io.on // hack for RxJS compatibility @XXX ensure that unsu
 const
 
   socketStream = name => conn$.flatMap(s => O.fromEvent(s, name, (...a) => (console.log('socketstream',name,...a),[ s.id, ...a ]))).share()
+, formatError = errorFormatter(app)
 
 // Intent
 , conn$   = O.fromEvent(io, 'connection').share()
@@ -57,8 +58,11 @@ const
 
 // Execute requests, transform results
 , httpRes$ = httpReq$.flatMap(([ sid, method, path, data, tr ]) =>
-    O.fromNodeCallback(request[method])(manager_uri+path, data).flatMap(resp => tr ? O.of([ sid, ...tr(resp) ]) : O.empty())
-  ).filter(e => !!e[1]).share()
+    O.fromNodeCallback(request[method])(manager_uri+path, data)
+      .flatMap(resp => tr ? O.of([ sid, ...tr(resp) ]) : O.empty())
+      .doOnError(err => console.error({ message: err.message, res: err.response }))
+      .catch(err => O.of([ sid, 'error', formatError(err) ] ))
+  ).share()
 
 // Stream of subscription requests ([ sid, wid ]), either from the 'associate' command or automatically following wallet provisioning
 , subscribe$ = O.merge(assoc$, httpRes$.filter(x => x[1] == 'provisioned').map(([ sid, _, wid ]) => [ sid, wid ]))

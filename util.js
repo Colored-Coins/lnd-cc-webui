@@ -18,5 +18,8 @@ const dbgStream = (label, o$) => o$.subscribe(
   () => debug(`${label} completed`)
 )
 
+export const errorFormatter = app => err =>
+  (err.response && err.response.body || err.response.text) || (app.settings.env == 'development' && err.stack) || err.message || err
+
 // expose debug object, call `Debug.enable()` to enable it
 if (typeof window != 'undefined') window.Debug = Debug
