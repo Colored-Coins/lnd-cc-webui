@@ -40,7 +40,7 @@ const main = ({ DOM, history$, socket, props$ }) => {
   // Intent
 , provis$  = wid$.filter(wid => !wid).map([ 'provision' ])
 , assoc$   = wid$.withLatestFrom(wallet$).filter(([ wid, wallet]) => wid && wallet.wid != wid).map(([ wid ]) => wid)
-             .merge(socket.events('reconnect').withLatestFrom(wid$, (_, wid) => wid))
+             .merge(socket.events('reconnect').withLatestFrom(wid$, (_, wid) => wid).filter(wid => !!wid))
              .map(wid => [ 'associate', wid ])
 , pay$     = DOM.select('.send-payment').events('submit').do(e => e.preventDefault()).withLatestFrom(wid$)
                .map(([ { target: t }, wid ]) => [ 'pay', wid, t.querySelector('[name=dest]').value, t.querySelector('[name=amount]').value ])
