@@ -26,7 +26,7 @@ Object.assign(app.locals, { url: process.env.URL, static_url: process.env.STATIC
 
 app.use(require('morgan')('dev'))
 
-app.get('/log/:wid', require('./log-stream'))
+app.get('/rawlog/:wid', require('./log-stream'))
 
 app.get('/', (req, res) => res.render(__dirname+'/index.jade'))
 app.get('/-.js', require('browserify-middleware')(__dirname + '/client.js'))

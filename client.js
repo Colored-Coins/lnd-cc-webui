@@ -56,7 +56,7 @@ const main = ({ DOM, history$, socket, props$ }) => {
     , paymentView({ wallet, props })
     , eventsView({ events, wallet, height, openCh, stateMap, props })
     , channel && div('.container.settle', [ button('.btn.btn-warning', 'Close channel & settle on-chain') ])
-    , div('.container.rawlog', [ h('iframe', { src: '/log/'+wid }) ])
+    , div('.container.rawlog', [ h('iframe', { src: '/rawlog/'+wid }) ])
     ]))
 
 //, location$ = evStream('provisioned', wid => ({ pathname: wid }))
