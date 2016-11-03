@@ -25,7 +25,8 @@ const main = ({ DOM, history$, socket, props$ }) => {
 , events$  = event$.scan((events, e) => e[0] == 'init' ? [ e ] : [ e, ...events ], [])
 , wallet$  = O.merge(evStream('wallet', w => w), evStream('init', _ => ({}))).startWith({})
 , height$  = evStream('accept', c => c.height).startWith(0)
-, openCh$  = evStream('ch_open', c => c.outpoint).scan((xs, x) => [ ...xs, x ], []).startWith([])
+, channel$ = evStream('ch_open', c => c.outpoint).startWith(undefined)
+, openCh$  = channel$.scan((xs, x) => [ ...xs, x ], []).startWith([])
 , balance$ = O.merge(
     wallet$.filter(w => !!w.balance).map(w => w.balance)
   , evStream('balance', b => b.channelbalance)
@@ -44,16 +45,16 @@ const main = ({ DOM, history$, socket, props$ }) => {
              .map(wid => [ 'associate', wid ])
 , pay$     = DOM.select('.send-payment').events('submit').do(e => e.preventDefault()).withLatestFrom(wid$)
                .map(([ { target: t }, wid ]) => [ 'pay', wid, t.querySelector('[name=dest]').value, t.querySelector('[name=amount]').value ])
-, settle$  = DOM.select('.settle').events('click').map([ 'settle' ])
+, settle$  = DOM.select('.settle .btn').events('click').withLatestFrom(wid$, channel$, (_, wid, ch) => [ 'settle', wid, ch ])
 , cmd$     = O.merge(provis$, assoc$, pay$, settle$)
 
   // Sinks
-, vtree$ = O.combineLatest(wid$, wallet$, balance$, height$, events$, openCh$, stateMap$, props$)
-    .map(([ wid, wallet, balance, height, events, openCh, stateMap, props ]) => !wallet.idpub ? loadingView() : div([
+, vtree$ = O.combineLatest(wid$, wallet$, balance$, height$, events$, channel$, openCh$, stateMap$, props$)
+    .map(([ wid, wallet, balance, height, events, channel, openCh, stateMap, props ]) => !wallet.idpub ? loadingView() : div([
       headerView({ wallet, props, balance })
     , paymentView({ wallet, props })
     , eventsView({ events, wallet, height, openCh, stateMap, props })
-    , div('.container.settle', [ button('.btn.btn-warning', 'Close channel & settle on-chain') ])
+    , channel && div('.container.settle', [ button('.btn.btn-warning', 'Close channel & settle on-chain') ])
     ]))
 
 //, location$ = evStream('provisioned', wid => ({ pathname: wid }))
