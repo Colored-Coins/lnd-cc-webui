@@ -29,6 +29,7 @@
     "socket.io": "^1.4.5",
     "stylus": "^0.54.5",
     "superagent": "^2.3.0",
+    "tail": "^1.2.1",
     "vague-time": "^2.4.0"
   },
   "devDependencies": {

@@ -1,7 +1,7 @@
 import Rx, { Observable as O } from 'rx'
 import { run } from '@cycle/rx-run'
 import io from 'socket.io-client'
-import { makeDOMDriver, div, header, form, span, strong, input, label, button, ul, li, h2, h3, h4, p } from '@cycle/dom'
+import { makeDOMDriver, div, button, h } from '@cycle/dom'
 import { makeHistoryDriver } from '@cycle/history'
 import { createHashHistory as createHistory } from 'history'
 import { makeSocketDriver, dbgStreams, makeWid } from './util'
@@ -56,6 +56,7 @@ const main = ({ DOM, history$, socket, props$ }) => {
     , paymentView({ wallet, props })
     , eventsView({ events, wallet, height, openCh, stateMap, props })
     , channel && div('.container.settle', [ button('.btn.btn-warning', 'Close channel & settle on-chain') ])
+    , div('.container.rawlog', [ h('iframe', { src: '/log/'+wid }) ])
     ]))
 
 //, location$ = evStream('provisioned', wid => ({ pathname: wid }))
