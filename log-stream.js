@@ -11,7 +11,7 @@ module.exports = (req, res, next) => {
   req.socket.setKeepAlive(true);
   req.socket.setTimeout(0);
 
-  res.setHeader('Content-Type', 'text/plain');
+  res.setHeader('Content-Type', 'text/plain; charset=utf-8');
   res.setHeader('Cache-Control', 'no-cache');
   res.setHeader('Connection', 'keep-alive');
   res.status(200);
@@ -22,9 +22,11 @@ module.exports = (req, res, next) => {
   rs.on('error', err => console.error(err.stack || err))
   rs.on('end', _ => {
     const tail = new Tail(logpath)
+        , keepAlive = setInterval(_ => res.write('\u200b')/*zero-width space*/, 20000)
+
     tail.on('line', d => res.write(d+'\n'))
     tail.on('error', err => console.error(err.stack || err))
 
-    res.on('close', _ => tail.unwatch())
+    res.on('close', _ => (clearInterval(keepAlive), tail.unwatch()))
   })
 }
