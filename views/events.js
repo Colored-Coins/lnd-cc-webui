@@ -1,5 +1,5 @@
-import { div, header, form, span, strong, input, label, button, ul, li, h2, h3, h4, p, br, a, em, pre } from '@cycle/dom'
-import { formatNumber } from './util'
+import { h, div, header, form, span, strong, input, label, button, ul, li, h2, h3, h4, p, br, a, em, pre } from '@cycle/dom'
+import { formatNumber, reltime } from './util'
 
 /*const itemView = ([ type, data, n=1 ]) =>
   li('.list-group-item.'+ (n>0?'recv':'sent'), [
@@ -33,17 +33,18 @@ const ev = ({ icon, title, text, meta, selector='' }) => li('.list-group-item'+s
 , div('.clearfix')
 ])
 
-const amountEl = (amount, asset) => em('.amount', [ span('.num', formatNumber(amount)), ' ', span('.asset', asset) ])
-    , peerEl   = peer => span({title: peer}, peer.substr(0, 25) + '…')
-    , txLink   = txid => a({ href: 'http://coloredcoins.org/explorer/testnet/tx/'+txid, target: '_blank'}, txid.substr(0, 25) + '…')
+const amountEl  = (amount, asset) => em('.amount', [ span('.num', formatNumber(amount)), ' ', span('.asset', asset) ])
+    , peerEl    = peer => span({title: peer}, peer.substr(0, 25) + '…')
+    , txLink    = txid => a({ href: 'http://coloredcoins.org/explorer/testnet/tx/'+txid, target: '_blank'}, txid.substr(0, 25) + '…')
+    , timestamp = (ts, d=new Date(ts*1000)) => h('time.reltime', { title: d.toISOString() }, reltime(d))
 
 const renderers = {
-  init:  (_, { wallet }) => ev({
-      title: 'Setting up Lightning Wallet...'
-  , meta: [ wallet.idpub ? span('.label.label-success', 'wallet ready') : null ]
+  init:  ({ ts }, { wallet }) => ev({
+    title: 'Setting up Lightning Wallet...'
+  , meta: [ (wallet.idpub && span('.label.label-success', 'wallet ready')), timestamp(ts) ]
   })
 
-, ch_init: ({ outpoint, peer, capacity }, { props: { asset }, openCh }, isOpen=~openCh.indexOf(outpoint)) => ev({
+, ch_init: ({ ts, outpoint, peer, capacity }, { props: { asset }, openCh }, isOpen=~openCh.indexOf(outpoint)) => ev({
     title: [ 'Incoming channel of ', amountEl(capacity, asset) ]
   , text: [
       em(null, 'peer:'), ' ', peerEl(peer), br()
@@ -53,17 +54,21 @@ const renderers = {
 
     ]
   , meta: [
-    , p(isOpen ? span('.label.label-success', 'confirmed on-chain')
+      p(isOpen ? span('.label.label-success', 'confirmed on-chain')
                : span('.label.label-warning', 'awaiting channel…'))
+    , timestamp(ts)
     ]
   })
 
-, tx: ({ height, amount, ourIndex, theirIndex }, { height: currHeight, stateMap, props: { asset } }, state=findState(stateMap, height)) => ev({
+, tx: ({ ts, height, amount, ourIndex, theirIndex }, { height: currHeight, stateMap, props: { asset } }, state=findState(stateMap, height)) => ev({
     selector: amount[0] == '-' ? '.sent' : '.recv'
   , title: [ amount[0] == '-' ? 'Send' : 'Receive', ' ', amountEl(amount.replace(/^-/, ''), asset) ]
   , text: state && [ em('new state:'), ' ours=', amountEl(state.ourBalance, asset), ', theirs=', amountEl(state.theirBalance, asset), ' (height ', em(height), ')' ]
-  , meta: p(+currHeight > +height+1 ? span('.label.label-success', 'confirmed off-chain')
-                                    : span('.label.label-warning', 'processing…'))
+  , meta: [
+      p(+currHeight > +height+1 ? span('.label.label-success', 'confirmed off-chain')
+                                : span('.label.label-warning', 'processing…'))
+    , timestamp(ts)
+    ]
   })
 }
 

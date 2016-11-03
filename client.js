@@ -5,6 +5,7 @@ import { makeDOMDriver, div, header, form, span, strong, input, label, button, u
 import { makeHistoryDriver } from '@cycle/history'
 import { createHashHistory as createHistory } from 'history'
 import { makeSocketDriver, dbgStreams, makeWid } from './util'
+import { reltime } from './views/util'
 
 import loadingView from './views/loading'
 import headerView  from './views/header'
@@ -72,6 +73,11 @@ run(main, {
 })
 
 
+// Live update for relative times
+setInterval(_ =>
+  Array.prototype.forEach.call(document.querySelectorAll('.reltime'), el =>
+      el.innerText = reltime(el.getAttribute('title')))
+, 5000)
 
     /*.map(([ point, height, balance, bench, props ]) => div([*/
       //balance ? pre(JSON.stringify(balance, '\t', 2)) : null
