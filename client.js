@@ -46,23 +46,27 @@ const main = ({ DOM, history$, socket, props$ }) => {
              .map(wid => [ 'associate', wid ])
 , pay$     = DOM.select('.send-payment').events('submit').do(e => e.preventDefault()).withLatestFrom(wid$)
                .map(([ { target: t }, wid ]) => [ 'pay', wid, t.querySelector('[name=dest]').value, t.querySelector('[name=amount]').value ])
-, settle$  = DOM.select('.settle .btn').events('click').withLatestFrom(wid$, channel$, (_, wid, ch) => [ 'settle', wid, ch ])
+, settle$  = DOM.select('.settle').events('click').withLatestFrom(wid$, channel$, (_, wid, ch) => [ 'settle', wid, ch ])
 , cmd$     = O.merge(provis$, assoc$, pay$, settle$)
+, showLog$ = DOM.select('.toggle-log').events('click').scan(s => !s).startWith(false)
 
   // Sinks
-, vtree$ = O.combineLatest(wid$, wallet$, balance$, height$, events$, channel$, openCh$, stateMap$, props$)
-    .map(([ wid, wallet, balance, height, events, channel, openCh, stateMap, props ]) => !wallet.idpub ? loadingView() : div([
+, vtree$ = O.combineLatest(wid$, wallet$, balance$, height$, events$, channel$, openCh$, showLog$, stateMap$, props$)
+    .map(([ wid, wallet, balance, height, events, channel, openCh, showLog, stateMap, props ]) => !wallet.idpub ? loadingView() : div([
       headerView({ wallet, props, balance })
     , paymentView({ wallet, props })
     , eventsView({ events, wallet, height, openCh, stateMap, props })
-    , channel && div('.container.settle', [ button('.btn.btn-default', 'Close channel & settle on-chain') ])
-    , wid && div('.container.rawlog', [ h('iframe', { src: `/rawlog/${ wid }` }) ])
+    , channel ? div('.container.controls', [
+        button('.settle.btn.btn-default', 'Close channel & settle on-chain'), ' '
+      , button('.toggle-log.btn.btn-default', showLog ? 'Hide logs' : 'View logs')
+      ]) : null
+    , showLog ? div('.container.rawlog', [ h('iframe', { src: `/rawlog/${ wid }` }) ]) : null
     ]))
 
 //, location$ = evStream('provisioned', wid => ({ pathname: wid }))
 , location$ = wallet$.withLatestFrom(wid$).filter(([ wallet, wid ]) => wallet.wid && wallet.wid != wid).map(([ { wid } ]) => ({ pathname: wid }))
 
-  dbgStreams({ wid$, event$, wallet$, height$, openCh$, balance$, cmd$, location$, history$, pay$ })
+  dbgStreams({ wid$, event$, wallet$, height$, openCh$, balance$, cmd$, location$, history$, pay$, showLog$ })
   return { DOM: vtree$, socket: cmd$, history$: location$ }
 }
 
