@@ -4,6 +4,7 @@ mixin js(path)
 mixin css(path)
   link(href=static_url+'/'+path+'.css?'+version, type='text/css', rel='stylesheet')
 
+doctype html
 html
   head
     block head
