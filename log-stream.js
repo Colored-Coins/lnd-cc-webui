@@ -10,7 +10,7 @@ const { LND_PATH, LND_NETWORK, STATIC_URL, VER } = process.env
     , RE_LOG_HEX = /\b([0-9a-f]{44,66})\b/g
     , RE_LOG_MARKER = /^(--- (Begin|End) .* ---)$/
     , RE_LOG_MSG = /\b((read|write)Message (to|from) 127.0.0.1:\d{4,5})\b/
-    , RE_LOG_KW = /(Chan(nel)?Point\([0-9a-f:]+\)|our_balance=|their_balance=|height=|\*(lnwire|wire|channeldb)\.\w+)/g
+    , RE_LOG_KW = /(Chan(nel)?Point\([0-9a-f:]+\)|(our_balance|their_balance|height|window_edge)=[^,\s]+|\*(lnwire|wire|channeldb)\.\w+)/g
 
 const log2html = line =>
   escapeHtml(line)
