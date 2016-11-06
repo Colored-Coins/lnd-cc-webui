@@ -35,7 +35,7 @@ const ev = ({ icon, title, text, meta, selector='' }) => li('.list-group-item'+s
 
 const amountEl  = (amount, asset) => em('.amount', [ span('.num', formatNumber(amount)), ' ', span('.asset', asset) ])
     , peerEl    = peer => span({title: peer}, peer.substr(0, 25) + '…')
-    , txLink    = txid => a({ href: 'http://coloredcoins.org/explorer/testnet/tx/'+txid, target: '_blank'}, txid.substr(0, 25) + '…')
+    , txLink    = txid => a({ href: 'http://coloredcoins.org/explorer/simnet/tx/'+txid, target: '_blank'}, txid.substr(0, 25) + '…')
     , timestamp = (ts, d=new Date(ts*1000)) => h('time.reltime', { title: d.toISOString() }, reltime(d))
 
 const renderers = {
