@@ -6,7 +6,7 @@ import { Tail } from 'tail'
 
 const { LND_PATH, LND_NETWORK, STATIC_URL, VER } = process.env
     , HTML_HEAD = `<link href="${ STATIC_URL }/-.css?${ VER }" type="text/css" rel="stylesheet"><body class="logframe"><pre>\n`
-    , RE_LOG = /^(\d{2}:\d{2}:\d{2} \d{4}-\d{2}-\d{2}) (\[\w+\]) (\w+): /
+    , RE_LOG = /^(\d{2}:\d{2}:\d{2} \d{4}-\d{2}-\d{2}) (\[\w+\]) (\w+:) /
     , RE_LOG_HEX = /\b([0-9a-f]{44,66})\b/g
     , RE_LOG_MARKER = /^(--- (Begin|End) .* ---)$/
     , RE_LOG_MSG = /\b((read|write)Message (to|from) 127.0.0.1:\d{4,5})\b/
@@ -16,7 +16,7 @@ const log2html = line =>
   escapeHtml(line)
     .replace(RE_LOG, '<span class="time">$1</span> '
                    + '<span class="level">$2</span> '
-                   + '<span class="module">$3</span>: ')
+                   + '<span class="module">$3</span> ')
     .replace(RE_LOG_KW, '<span class="kw">$1</span>')
     //.replace(RE_LOG_HEX, '<span class="hex">$1</span>')
     .replace(RE_LOG_MARKER, '<span class="marker">$1</span>')
