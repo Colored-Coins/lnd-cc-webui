@@ -13,6 +13,8 @@ import paymentView from './views/payment'
 import eventsView  from './views/events'
 import welcomeView from './views/welcome'
 
+import errorDialog from './views/error-dialog'
+
 const ID = x => x
 
 const main = ({ DOM, history$, socket, props$ }) => {
@@ -34,14 +36,13 @@ const main = ({ DOM, history$, socket, props$ }) => {
     wallet$.filter(w => !!w.balance).map(w => w.balance)
   , evStream('balance', b => b.channelbalance)
   , evStream('accept', c => c.ourBalance)
+  , evStream('chain', c => c.ourBalance)
   , evStream('ch_settle_done', _ => 0)
   ).startWith('0').distinctUntilChanged()
-//, logMap$ = evStream('accept').scan((o, c) => (o.o[c.ourIndex]=c, o.t[c.theirIndex]=c, o), {o:{}, t:{}}).startWith({o:{}, t:{}})
-, stateMap$ = evStream('accept').scan((o, c) => (o[c.height]=c, o), {}).startWith({})
-, canPay$ = balance$.map(b => b > 0)
+, stateMap$  = evStream('accept').scan((o, c) => (o[c.height]=c, o), {}).startWith({})
+, canPay$    = balance$.map(b => b > 0)
+, error$     = evStream('error')
 
-//, point$   = valOf('outpoint').map(point => `${point.txid.substr(0,10)}:${point.index}`).startWith(undefined)
-//, bench$   = valOf('benchmark').withLatestFrom(props$, (b, p) => `${b.tps} tx/sec: sent ${b.sent} ${p.asset}, received ${b.recv} ${p.asset} in the last ${b.timeframe}`).startWith(undefined)
 
   // Intent
 , provis$  = wid$.filter(wid => !wid).map([ 'provision' ])
@@ -70,8 +71,8 @@ const main = ({ DOM, history$, socket, props$ }) => {
 
 , location$ = wallet$.withLatestFrom(wid$).filter(([ wallet, wid ]) => wallet.wid && wallet.wid != wid).map(([ { wid } ]) => ({ pathname: wid }))
 
-  dbgStreams({ wid$, event$, wallet$, height$, openCh$, balance$, cmd$, location$, history$, pay$, showLog$, canPay$ })
-  return { DOM: vtree$, socket: cmd$, history$: location$ }
+  dbgStreams({ wid$, event$, wallet$, height$, openCh$, balance$, cmd$, location$, history$, pay$, showLog$, canPay$, canSettle$, error$ })
+  return { DOM: vtree$, socket: cmd$, history$: location$, error$ }
 }
 
 run(main, {
@@ -79,6 +80,7 @@ run(main, {
 , socket:   makeSocketDriver(io(location.origin, { transports: [ 'websocket' ] }))
 , history$: makeHistoryDriver(createHistory({ hashType: 'noslash' }))
 , props$:   _ => O.just({ asset: 'USD', showWelcome: !localStorage.getItem('shown_welcome') })
+, error$:   err$ => (err$.subscribe(errorDialog), O.empty())
 })
 
 localStorage.setItem('shown_welcome', true)
