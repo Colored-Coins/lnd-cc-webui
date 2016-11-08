@@ -62,7 +62,7 @@ const renderers = {
 , ch_settle_init: ({ ts, outpoint, txid }, { settledCh }, isSettled=~settledCh.indexOf(outpoint)) => ev({
     title: 'Closing channel on-chain'
   , text: isSettled
-          ? [ em('closing tx confirmed: '), txLink(txid) ]
+          ? [ em('closing tx: '), txLink(txid) ]
           : [ em('awaiting closing tx'), ' (', txLink(txid), ') to confirm' ]
   , meta: [
       p(isSettled ? span('.label.label-success', 'confirmed on-chain')
