@@ -1,7 +1,7 @@
 import Rx, { Observable as O } from 'rx'
 import { run } from '@cycle/rx-run'
 import io from 'socket.io-client'
-import { makeDOMDriver, div, button, h } from '@cycle/dom'
+import { makeDOMDriver, div, button, a, h } from '@cycle/dom'
 import { makeHistoryDriver } from '@cycle/history'
 import { createHashHistory as createHistory } from 'history'
 import { makeSocketDriver, dbgStreams, makeWid } from './util'
@@ -55,23 +55,29 @@ const main = ({ DOM, history$, socket, props$ }) => {
 , cmd$     = O.merge(provis$, assoc$, pay$, settle$)
 , showLog$ = DOM.select('.toggle-log').events('click').scan(s => !s).startWith(false)
 
-  // Sinks
-, vtree$ = O.combineLatest(wid$, wallet$, balance$, height$, events$, channel$, openCh$, settledCh$, canPay$, showLog$, stateMap$, props$)
-    .map(([ wid, wallet, balance, height, events, channel, openCh, settledCh, canPay, showLog, stateMap, props ]) => !wallet.idpub ? loadingView() : div([
+, location$ = wallet$.withLatestFrom(wid$).filter(([ wallet, wid ]) => wallet.wid && wallet.wid != wid).map(([ { wid } ]) => ({ pathname: wid }))
+
+, settleBtn$ = O.merge(
+    channel$.filter(x => !!x).map(button('.settle.btn.btn-default', 'Close channel & settle on-chain'))
+  , settle$.map(button('.btn.btn-default', { disabled: true }, 'Closing channel...'))
+  , settledCh$.filter(xs => xs.length).map(a('.btn.btn-default', { href: '/' }, 'Start new wallet')) // assumes a single channel per wallet
+  ).startWith(button('.btn.btn-default', { disabled: true }, 'Opening channel...'))
+
+, vtree$ = O.combineLatest(wid$, wallet$, balance$, height$, events$, openCh$, settledCh$, canPay$, showLog$, settleBtn$, stateMap$, props$)
+    .map(([ wid, wallet, balance, height, events, openCh, settledCh, canPay, showLog, settleBtn, stateMap, props ]) => !wallet.idpub ? loadingView() : div([
       headerView({ wallet, props, balance })
     , props.showWelcome ? welcomeView : null
     , paymentView({ wallet, props, canPay })
     , eventsView({ events, wallet, height, openCh, settledCh, stateMap, props })
-    , channel ? div('.container.controls', [
-        button('.settle.btn.btn-default', 'Close channel & settle on-chain'), ' '
+    , div('.container.controls', [
+        settleBtn, ' '
       , button('.toggle-log.btn.btn-default', showLog ? 'Hide logs' : 'View logs')
-      ]) : null
+      ])
     , showLog ? div('.container.rawlog', [ h('iframe', { src: `/rawlog/${ wid }` }) ]) : null
     ]))
 
-, location$ = wallet$.withLatestFrom(wid$).filter(([ wallet, wid ]) => wallet.wid && wallet.wid != wid).map(([ { wid } ]) => ({ pathname: wid }))
-
-  dbgStreams({ wid$, event$, wallet$, height$, openCh$, balance$, cmd$, location$, history$, pay$, showLog$, canPay$, canSettle$, error$ })
+  // Sinks
+  dbgStreams({ wid$, event$, wallet$, height$, openCh$, balance$, cmd$, location$, history$, pay$, showLog$, canPay$, settleBtn$, error$ })
   return { DOM: vtree$, socket: cmd$, history$: location$, error$ }
 }
 
