@@ -37,6 +37,7 @@ const amountEl  = (amount, asset) => em('.amount', [ span('.num', formatNumber(a
     , peerEl    = peer => span({title: peer}, peer.substr(0, 25) + '…')
     , txLink    = txid => a({ href: 'http://coloredcoins.org/explorer/simnet/tx/'+txid, target: '_blank'}, txid.substr(0, 25) + '…')
     , timestamp = (ts, d=new Date(ts*1000)) => h('time.reltime', { title: d.toISOString() }, reltime(d))
+    , spinner   = span('.glyphicon.glyphicon-refresh.spinning')
 
 const renderers = {
   init:  ({ ts }, { wallet }) => ev({
@@ -55,7 +56,7 @@ const renderers = {
     ]
   , meta: [
       p(isOpen ? span('.label.label-success', 'confirmed on-chain')
-               : span('.label.label-warning', 'awaiting confirmation…'))
+               : span('.label.label-warning', ['awaiting confirmation… ', spinner ]))
     , timestamp(ts)
     ]
   })
@@ -66,7 +67,7 @@ const renderers = {
           : [ em('awaiting closing tx'), ' (', txLink(txid), ') to confirm' ]
   , meta: [
       p(isSettled ? span('.label.label-success', 'confirmed on-chain')
-               : span('.label.label-warning', 'awaiting confirmation…'))
+               : span('.label.label-warning', [ 'awaiting confirmation… ', spinner ]))
     , timestamp(ts)
     ]
   })
@@ -77,7 +78,7 @@ const renderers = {
   , text: state && [ em('new state:'), ' ours=', amountEl(state.ourBalance, asset), ', theirs=', amountEl(state.theirBalance, asset), ' (height ', em(height), ')' ]
   , meta: [
       p(+currHeight > +height+1 ? span('.label.label-success', 'confirmed off-chain')
-                                : span('.label.label-warning', 'processing…'))
+                                : span('.label.label-warning', [ 'processing… ', spinner ]))
     , timestamp(ts)
     ]
   })

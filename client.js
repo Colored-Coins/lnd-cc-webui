@@ -1,7 +1,7 @@
 import Rx, { Observable as O } from 'rx'
 import { run } from '@cycle/rx-run'
 import io from 'socket.io-client'
-import { makeDOMDriver, div, button, a, h } from '@cycle/dom'
+import { makeDOMDriver, div, button, a, span, h } from '@cycle/dom'
 import { makeHistoryDriver } from '@cycle/history'
 import { createHashHistory as createHistory } from 'history'
 import { makeSocketDriver, dbgStreams, makeWid } from './util'
@@ -16,6 +16,7 @@ import welcomeView from './views/welcome'
 import errorDialog from './views/error-dialog'
 
 const ID = x => x
+    , spinner   = span('.glyphicon.glyphicon-refresh.spinning')
 
 const main = ({ DOM, history$, socket, props$ }) => {
   const
@@ -59,9 +60,9 @@ const main = ({ DOM, history$, socket, props$ }) => {
 
 , settleBtn$ = O.merge(
     channel$.filter(x => !!x).map(button('.settle.btn.btn-default', 'Close channel & settle on-chain'))
-  , settle$.map(button('.btn.btn-default', { disabled: true }, 'Closing channel...'))
+  , settle$.map(button('.btn.btn-default', { disabled: true }, [ 'Closing channel… ', spinner ]))
   , settledCh$.filter(xs => xs.length).map(a('.btn.btn-default', { href: '/' }, 'Start new wallet')) // assumes a single channel per wallet
-  ).startWith(button('.btn.btn-default', { disabled: true }, 'Opening channel...'))
+  ).startWith(button('.btn.btn-default', { disabled: true }, [ 'Opening channel… ', spinner ]))
 
 , vtree$ = O.combineLatest(wid$, wallet$, balance$, height$, events$, openCh$, settledCh$, canPay$, showLog$, settleBtn$, stateMap$, props$)
     .map(([ wid, wallet, balance, height, events, openCh, settledCh, canPay, showLog, settleBtn, stateMap, props ]) => !wallet.idpub ? loadingView() : div([
