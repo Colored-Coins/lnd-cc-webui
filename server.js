@@ -16,6 +16,8 @@ const manager_uri = process.env.LND_ORCHESTRATOR_URI
 , io    = require('socket.io')(http)
 , rread = require('redis').createClient(process.env.REDIS_URI)
 
+, formatError = errorFormatter(app)
+
 // Model
 , { walletEvents } = require('./model')(rread)
 
@@ -39,15 +41,14 @@ io.addEventListener = io.on // hack for RxJS compatibility @XXX ensure that unsu
 
 const
 
-  socketStream = name => conn$.flatMap(s => O.fromEvent(s, name, (...a) => (console.log('socketstream',name,...a),[ s.id, ...a ]))).share()
-, formatError = errorFormatter(app)
+  conn$   = O.fromEvent(io, 'connection').share()
+, socketStream = name => conn$.flatMap(s => O.fromEvent(s, name, (...a) => [ s.id, ...a ])).share()
 
 // Intent
-, conn$   = O.fromEvent(io, 'connection').share()
 , provis$ = conn$.flatMap(s => O.fromEvent(s, 'provision', _ => [ s.id ])).share()
 , assoc$  = conn$.flatMap(s => O.fromEvent(s, 'associate', wid => [ s.id, wid ])).share()
-, pay$    = socketStream('pay') // conn$.flatMap(s => O.fromEvent(s, 'pay', (...a) => [ s.id, ...a ])).share()
-, settle$ = conn$.flatMap(s => O.fromEvent(s, 'settle', wid => [ s.id, wid ])).share()
+, pay$    = socketStream('pay')
+, settle$ = socketStream('settle')
 , discon$ = conn$.flatMap(s => O.fromEvent(s, 'disconnect', reason => [ s.id, reason ])).share()
 
 // Translate intent to outgoing HTTP requests for lnd-orchestrator
@@ -55,7 +56,7 @@ const
     provis$.map(([ sid ])                    => [ sid, 'post', '/provision', null, r => [ 'provisioned', r.text ] ])
   , assoc$.map (([ sid, wid ])               => [ sid, 'get',  `/w/${wid}`,  null, r => [ 'wallet', only(r.body, 'idpub balance') ] ])
   , pay$.map   (([ sid, wid, dest, amount ]) => [ sid, 'post', `/w/${wid}/pay`, { dest, amount } ])
-  , settle$.map(([ sid, wid ])               => [ sid, 'post', `/w/${wid}/settle` ])
+  , settle$.map(([ sid, wid, outpoint ])     => [ sid, 'post', `/w/${wid}/settle`, { outpoint } ])
   )
 
 // Execute requests, transform results
