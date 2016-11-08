@@ -24,16 +24,21 @@ const manager_uri = process.env.LND_ORCHESTRATOR_URI
 // Setup Express
 app.set('port', process.env.PORT || 9000)
 app.set('host', process.env.HOST || '127.0.0.1')
+app.set('views', __dirname+'/pages')
 Object.assign(app.locals, { url: process.env.URL, static_url: process.env.STATIC_URL, version: process.env.VER})
 
 app.use(require('morgan')('dev'))
 
 app.get('/rawlog/:wid', require('./log-stream'))
 
-app.get('/', (req, res) => res.render(__dirname+'/index.jade'))
-app.get('/-.js', require('browserify-middleware')(__dirname + '/client.js'))
-app.get('/-.css', require('stylus').middleware({ src: _ => __dirname+'/style.styl', dest: _ => __dirname+'/static/-.css' }))
-app.use('/', express.static(__dirname + '/static'))
+if (app.settings.env == 'development') {
+  // on production, this is served directly by nginx
+  app.get('/', (req, res) => res.render('index.jade'))
+  app.get('/faq.html', (req, res) => res.render('faq.jade'))
+  app.get('/-.js', require('browserify-middleware')(__dirname + '/client.js'))
+  app.get('/-.css', require('stylus').middleware({ src: _ => __dirname+'/style.styl', dest: _ => __dirname+'/static/-.css' }))
+  app.use('/', express.static(__dirname + '/static'))
+}
 
 // Setup Socket.io
 io.set('transports', [ 'websocket' ])
