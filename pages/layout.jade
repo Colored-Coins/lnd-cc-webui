@@ -4,6 +4,10 @@ mixin js(path)
 mixin css(path)
   link(href=static_url+'/'+path+'.css?'+version, type='text/css', rel='stylesheet')
 
+block vars
+  - title = null
+  - active = null
+
 doctype html
 html
   head
@@ -11,15 +15,29 @@ html
       meta(charset='utf-8')
       meta(http-equiv='X-UA-Compatible', content='IE=edge')
       meta(name='viewport', content='width=device-width, initial-scale=1')
+      base(href=url)
 
-      title Colored Coins LN
+      title #{ title ? title + ' - ' : '' }Colored Coins LN
       +css('bootstrap/css/bootstrap.min')
       +css('-')
   body
     nav.navbar.navbar-default: .container
-      .navbar-header: a.navbar-brand(href='#') Colu USD wallet
+      .navbar-header
+        button.navbar-toggle.collapsed(type='button', data-toggle='collapse', data-target='#navbar', aria-expanded='false', aria-controls='navbar')
+          span.sr-only Toggle navigation
+          | #[span.icon-bar]#[span.icon-bar]#[span.icon-bar]
+
+        a.navbar-brand(href=url) Colu USD wallet
+
+      #navbar.navbar-collapse.collapse.navbar-right
+        ul.nav.navbar-nav
+          li(class=(active_page=='faq'?'active':'')): a(href='faq.html') FAQ
+          li: a(href='mailto:contact@colu.com') Feedback
 
     block content
+
+    script(src='https://code.jquery.com/jquery-3.1.1.slim.min.js')
+    +js('bootstrap/js/bootstrap.min')
 
     if settings.env == 'production'
       script.
@@ -28,3 +46,4 @@ html
         m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
         })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
         ga('create', 'UA-63853577-3', 'auto');ga('send', 'pageview');
+
