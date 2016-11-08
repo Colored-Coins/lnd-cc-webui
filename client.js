@@ -16,7 +16,6 @@ import welcomeView from './views/welcome'
 import errorDialog from './views/error-dialog'
 
 const ID = x => x
-    , spinner   = span('.glyphicon.glyphicon-refresh.spinning')
 
 const main = ({ DOM, history$, socket, props$ }) => {
   const
@@ -60,9 +59,9 @@ const main = ({ DOM, history$, socket, props$ }) => {
 
 , settleBtn$ = O.merge(
     channel$.filter(x => !!x).map(button('.settle.btn.btn-default', 'Close channel & settle on-chain'))
-  , settle$.map(button('.btn.btn-default', { disabled: true }, [ 'Closing channel… ', spinner ]))
+  , settle$.map(button('.btn.btn-default', { disabled: true }, 'Closing channel…'))
   , settledCh$.filter(xs => xs.length).map(a('.btn.btn-default', { href: '/' }, 'Start new wallet')) // assumes a single channel per wallet
-  ).startWith(button('.btn.btn-default', { disabled: true }, [ 'Opening channel… ', spinner ]))
+  ).startWith(button('.btn.btn-default', { disabled: true }, 'Opening channel…'))
 
 , vtree$ = O.combineLatest(wid$, wallet$, balance$, height$, events$, openCh$, settledCh$, canPay$, showLog$, settleBtn$, stateMap$, props$)
     .map(([ wid, wallet, balance, height, events, openCh, settledCh, canPay, showLog, settleBtn, stateMap, props ]) => !wallet.idpub ? loadingView() : div([
