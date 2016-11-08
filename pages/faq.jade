@@ -6,4 +6,67 @@ append vars
 
 block content
   .container
-    h1 FAQ
+    :markdown
+      ## FAQ
+      **What’s my address?**
+
+      You will see on your wallet your "lightning ID", which is comparable to a bitcoin address. You can give it to someone else who will send funds to you. If you copy the URL at the navigation line after starting a wallet, you’ll be able to go to that same wallet again in the future with the same ID.
+
+      **How can I test this by myself?**
+
+      You can open 2 windows of the demo, starting both at the root URL - LINK_HERE - to start 2 separate wallets. Then, you can send funds from one to another. In fact, you can also open 3 or 4 windows and instantly send funds all over the place!
+
+      **Where is my private key?**
+
+      For simplicity, the front-end UI of this demo isn’t handling private keys. Whenever you start a new wallet, we start a new lightning node on our servers just for you, with the private key generated on the server-side, and all signing being made server-side. The front-end UI is only giving commands to the user’s lightning node on our servers. In the future, private key management will be done on the client-side.
+
+      Please note, our demo is open source, and you can download our Colored Coins enabled **lnd** node and run it by yourself locally and connect to the same network, managing your own keys.
+
+      The front-end is there to make the demo easy and friendly, and will change a lot before the final release.
+
+      **What Lightning implementation are you using?**
+
+      We’re using **lnd** by Lightning Labs. We’ve added the capability to create and process Colored Coins transactions to fund and close channels, and to transferring value denominated in colored coins on the network itself.
+
+      **Can I see who sent a transaction that I received?**
+
+      Interestingly, you currently can’t. Since Lightning transactions aren’t committed to the bitcoin blockchain, the identity of the server isn’t public information. In order to increase privacy, the identity of the sender isn’t known. Nodes that will want to identify payers will set up identity beforehand, and issue an "invoice" on the Lightning network to the sender, which will use it to pay. Receivers will then identify senders by the invoice that’s being paid. Our implementation will support invoices in the future.
+
+      **What are the fees?**
+
+      Ordinary bitcoin fees are required for opening and closing a payment channel. While the channel is open, no bitcoin fees are necessary. As the Lightning Network develops, participating nodes are expected to charge fees in order to route payments to recipients, however these are expected to be a lot lower than bitcoin’s "miner fees", as anyone could be a node competing for those fees, while being a miner on the bitcoin network is out of most 
+
+      **Is this running on the bitcoin network? Main net or testnet? Can I use this in production?**
+
+      Yes, this is using the bitcoin network. A "mainnet" version isn’t available yet, as Lightning requires Segregated Witness to be activated on the network, and that didn’t happen yet (we expect that to happen very soon!). 
+
+      We offer instead 2 version: 
+
+      * A **testnet** version which uses the regular bitcoin testnet
+
+      * A **simnet** (simulated network) version that uses a local, internal blockchain used for the purposes of the demo only. 
+
+      Since the simnet version is local, it confirms blocks immediately, so it’s quicker to open and close channels. However, if you want the full experience on a real chain, you can test out the testnet version - but keep in mind opening and closing channels will take some time.
+
+      **Can I use this in production?**
+
+      Not yet. Lightning implementations are generally not yet
+
+      **Is this open source?**
+
+      Yes! This is a work in process but you can already look at our work LINK
+
+      **How does routing work in this implementation? What does the network topology look like?**
+
+      We believe that in the Colored Coins model, it makes sense for token issuers to maintain a "payment hub", which will be connected to all (or most) nodes using that token on the Lightning Network. 
+
+      This demo uses a single central payment hub, which serves as the middleman between all nodes. This hub doesn’t introduce counter-party risk and can’t "steal" funds on their way to the true receiver. However, the hub does gain insight into the transactions of its users, lowering the amount of privacy users have. Transactions using payment hubs are still more private than on-chain transactions, though.
+
+      We believe that as routing technology in Lightning Network improves, users of such tokens will join the network as nodes that will help routing payments on the network, and provide an alternative to the payment hub maintained by the issuer. We’re planning to participate in the efforts to advance the routing mechanism in Lightning, and make sure it fits the needs of Colored Coins users.
+
+      **What’s the difference between on-chain and off-chain conformations?**
+
+      On-chain transactions are submitted to the bitcoin blockchain, and are used to open and close payment channels. They are confirmed once included in a block.
+
+      As long as the channel is open, transactions within that channel are made by changing the balance off-chain, without submitting a transaction to the blockchain. They are considered as confirmed once a node has the proof needed to claim the funds, which should take less than a second.
+
