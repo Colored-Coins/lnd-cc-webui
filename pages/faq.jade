@@ -30,7 +30,7 @@ block content
 
       **Can I see who sent a transaction that I received?**
 
-      Interestingly, you currently can’t. Since Lightning transactions aren’t committed to the bitcoin blockchain, the identity of the server isn’t public information. In order to increase privacy, the identity of the sender isn’t known. Nodes that will want to identify payers will set up identity beforehand, and issue an "invoice" on the Lightning network to the sender, which will use it to pay. Receivers will then identify senders by the invoice that’s being paid. Our implementation will support invoices in the future.
+      Interestingly, you currently can’t. Since Lightning transactions aren’t committed to the bitcoin blockchain, the identity of the sender isn’t public information. In order to increase privacy, the identity of the sender isn’t known. Nodes that will want to identify payers will set up identity beforehand, and issue an "invoice" on the Lightning network to the sender, which will use it to pay. Receivers will then identify senders by the invoice that’s being paid. Our implementation will support invoices in the future.
 
       **What are the fees?**
 
@@ -50,11 +50,19 @@ block content
 
       **Can I use this in production?**
 
-      Not yet. Lightning implementations are generally not yet
+      Not yet. Lightning implementations are generally not yet ready for live use.
+      The bitcoin network still doesn’t have the “segwit” feature activated, and there’s more work to be done on the Lightning protocol.
+      We also still have work to do in order to generalize our implementation, and support latest Lightning features.
+
+      Please **don’t** attempt to use this in production yet, but keep in touch, we’ll have more coming soon!
 
       **Is this open source?**
 
-      Yes! This is a work in process but you can already look at our work LINK
+      Yes! This is a work in process but you can already look at our GitHub:
+
+        - TBD
+        - TBD
+        - TBD
 
       **How does routing work in this implementation? What does the network topology look like?**
 
