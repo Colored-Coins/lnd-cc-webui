@@ -11,6 +11,7 @@ import loadingView from './views/loading'
 import headerView  from './views/header'
 import paymentView from './views/payment'
 import eventsView  from './views/events'
+import welcomeView from './views/welcome'
 
 const ID = x => x
 
@@ -53,11 +54,11 @@ const main = ({ DOM, history$, socket, props$ }) => {
 , cmd$     = O.merge(provis$, assoc$, pay$, settle$)
 , showLog$ = DOM.select('.toggle-log').events('click').scan(s => !s).startWith(false)
 
-
   // Sinks
 , vtree$ = O.combineLatest(wid$, wallet$, balance$, height$, events$, channel$, openCh$, settledCh$, canPay$, showLog$, stateMap$, props$)
     .map(([ wid, wallet, balance, height, events, channel, openCh, settledCh, canPay, showLog, stateMap, props ]) => !wallet.idpub ? loadingView() : div([
       headerView({ wallet, props, balance })
+    , props.showWelcome ? welcomeView : null
     , paymentView({ wallet, props, canPay })
     , eventsView({ events, wallet, height, openCh, settledCh, stateMap, props })
     , channel ? div('.container.controls', [
@@ -67,7 +68,6 @@ const main = ({ DOM, history$, socket, props$ }) => {
     , showLog ? div('.container.rawlog', [ h('iframe', { src: `/rawlog/${ wid }` }) ]) : null
     ]))
 
-//, location$ = evStream('provisioned', wid => ({ pathname: wid }))
 , location$ = wallet$.withLatestFrom(wid$).filter(([ wallet, wid ]) => wallet.wid && wallet.wid != wid).map(([ { wid } ]) => ({ pathname: wid }))
 
   dbgStreams({ wid$, event$, wallet$, height$, openCh$, balance$, cmd$, location$, history$, pay$, showLog$, canPay$ })
@@ -78,9 +78,10 @@ run(main, {
   DOM:      makeDOMDriver('#app')
 , socket:   makeSocketDriver(io(location.origin, { transports: [ 'websocket' ] }))
 , history$: makeHistoryDriver(createHistory({ hashType: 'noslash' }))
-, props$:   _ => O.just({ asset: 'USD' })
+, props$:   _ => O.just({ asset: 'USD', showWelcome: !localStorage.getItem('shown_welcome') })
 })
 
+localStorage.setItem('shown_welcome', true)
 
 // Live update for relative times
 setInterval(_ =>

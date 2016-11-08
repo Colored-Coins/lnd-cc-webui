@@ -1,8 +1,12 @@
 mixin js(path)
-  script(src=static_url+'/'+path+'.js?'+version)
+  if !~path.indexOf('://')
+    - path = static_url + '/' + path + '.js?' + version
+  script(src=path)
 
 mixin css(path)
-  link(href=static_url+'/'+path+'.css?'+version, type='text/css', rel='stylesheet')
+  if !~path.indexOf('://')
+    - path = static_url + '/' + path + '.css?' + version
+  link(href=path, type='text/css', rel='stylesheet')
 
 block vars
   - title = null
@@ -36,8 +40,8 @@ html
 
     block content
 
-    script(src='https://code.jquery.com/jquery-3.1.1.slim.min.js')
-    +js('bootstrap/js/bootstrap.min')
+    +js('https://code.jquery.com/jquery-3.1.1.slim.min.js')
+    +js('bootstrap/js/bootstrap.mini')
 
     if settings.env == 'production'
       script.
