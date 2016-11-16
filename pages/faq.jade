@@ -36,17 +36,15 @@ block content
 
       Ordinary bitcoin fees are required for opening and closing a payment channel. While the channel is open, no bitcoin fees are necessary. As the Lightning Network develops, participating nodes are expected to charge fees in order to route payments to recipients, however these are expected to be a lot lower than bitcoin’s "miner fees", as anyone could be a node competing for those fees, while being a miner on the bitcoin network is out of most 
 
-      **Is this running on the bitcoin network? Main net or testnet? Can I use this in production?**
+      **Is this running on the bitcoin network? Main net or testnet?**
 
-      Yes, this is using the bitcoin network. A "mainnet" version isn’t available yet, as Lightning requires Segregated Witness to be activated on the network, and that didn’t happen yet (we expect that to happen very soon!). 
+      Yes, this is using the bitcoin network. A “mainnet” version isn’t available yet, as Lightning requires Segregated Witness to be activated on the network, and that didn’t happen yet (we expect that to happen very soon!).
 
-      We offer instead 2 version: 
+      Our implementation works great on testnet, however we decided to run the demo on a simnet (simulated network), a local, internal blockchain that is used for the purposes of this demo only.
 
-      * A **testnet** version which uses the regular bitcoin testnet
+      This is using the exact same rules and uses the same btcd client as mainnet/testnet would, but since the simnet version is local, it confirms blocks immediately, so it’s quicker to open and close payment channels. We used it so that people trying out our demo would have a better experience.
 
-      * A **simnet** (simulated network) version that uses a local, internal blockchain used for the purposes of the demo only. 
-
-      Since the simnet version is local, it confirms blocks immediately, so it’s quicker to open and close channels. However, if you want the full experience on a real chain, you can test out the testnet version - but keep in mind opening and closing channels will take some time.
+      However, if you want to try the full thing on a real chain, you can download our implementation and run your own Lightning node on testnet.
 
       **Can I use this in production?**
 
