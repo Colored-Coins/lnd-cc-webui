@@ -78,7 +78,10 @@ const renderers = {
 , tx: ({ ts, height, amount, ourIndex, theirIndex }, { height: currHeight, stateMap, props: { asset } }, state=findState(stateMap, height)) => ev({
     selector: amount[0] == '-' ? '.sent' : '.recv'
   , title: [ amount[0] == '-' ? 'Send' : 'Receive', ' ', amountEl(amount.replace(/^-/, ''), asset) ]
-  , text: state && [ em('new state:'), ' ours=', amountEl(state.ourBalance, asset), ', theirs=', amountEl(state.theirBalance, asset), ' (height ', em(height), ')' ]
+  , text: [
+      state ? p([ em('new state:'), ' ours=', amountEl(state.ourBalance, asset), ', theirs=', amountEl(state.theirBalance, asset), ' (height ', em(height), ')' ]) : null
+    , height == 0 ? p('Here you go, have some play money to try this out with!') : null
+  ]
   , meta: [
       p(+currHeight > +height+1 ? span('.label.label-success', 'confirmed off-chain')
                                 : span('.label.label-warning', [ 'processing… ', spinner ]))
