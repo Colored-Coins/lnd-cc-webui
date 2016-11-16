@@ -68,7 +68,7 @@ const main = ({ DOM, history$, socket, props$ }) => {
   )
 
 , vtree$ = O.merge(
-    O.of(indexView)
+    history$.filter(l => l.pathname == '/').map(indexView)
   , wallet$.filter(w => !w.idpub).map(loadingView)
   , O.combineLatest(wid$, wallet$, balance$, height$, events$, openCh$, settledCh$, canPay$, showLog$, settleBtn$, stateMap$, props$)
       .filter(([ wid, wallet ]) => !!wallet.idpub)
