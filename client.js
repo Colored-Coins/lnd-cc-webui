@@ -22,11 +22,11 @@ const main = ({ DOM, history$, socket, props$ }) => {
   evStream = (t, mapper=ID) => event$.filter(x => x[0] == t).map(x => mapper(...x.slice(1)))
 
   // Model
-, wid$     = history$.map(l => l.pathname.replace(/^\//, '')).filter(l => l != 'new').distinctUntilChanged()
+, wid$     = history$.map(l => l.pathname.replace(/^\//, '')).filter(l => l != 'new').distinctUntilChanged().startWith(undefined)
 , event$   = socket.events('event', (...e) => e)
 , init$    = evStream('init')
-, events$  = init$.flatMapLatest(ie => (console.log('new events'),event$.startWith([ 'init', ie ]).scan((events, e) => [ e, ...events ], [])))
-, wallet$  = O.merge(evStream('wallet', w => w), init$.map({}))
+, events$  = init$.flatMapLatest(ie => event$.startWith([ 'init', ie ]).scan((events, e) => [ e, ...events ], []))
+, wallet$  = O.merge(evStream('wallet', w => w), init$.map({})).startWith({})
 , height$  = O.merge(evStream('chain'), evStream('accept')).map(c => c.height).startWith(0)
 , channel$ = evStream('ch_open', c => c.outpoint).startWith(undefined)
 , openCh$  = wid$.flatMapLatest(_ => channel$.scan((xs, x) => [ ...xs, x ], []).startWith([]))
@@ -46,7 +46,7 @@ const main = ({ DOM, history$, socket, props$ }) => {
 
   // Intent
 , provis$  = history$.filter(l => l.pathname == '/new').map([ 'provision' ])
-, assoc$   = wid$.withLatestFrom(wallet$.startWith({})).filter(([ wid, wallet]) => wid && wallet.wid != wid).map(([ wid ]) => wid)
+, assoc$   = wid$.withLatestFrom(wallet$).filter(([ wid, wallet]) => wid && wallet.wid != wid).map(([ wid ]) => wid)
              .merge(socket.events('reconnect').withLatestFrom(wid$, (_, wid) => wid).filter(wid => !!wid))
              .map(wid => [ 'associate', wid ])
 , pay$     = DOM.select('.send-payment').events('submit').do(e => e.preventDefault()).withLatestFrom(wid$)
@@ -62,19 +62,19 @@ const main = ({ DOM, history$, socket, props$ }) => {
   , evStream('ch_init').map(button('.btn.btn-default', { disabled: true }, 'Opening channel…'))
   , channel$.filter(x => !!x).map(button('.settle.btn.btn-default', 'Close channel & settle on-chain'))
   , settle$.map(button('.btn.btn-default', { disabled: true }, 'Closing channel…'))
-  , settledCh$.filter(xs => xs.length).map(a('.btn.btn-default', { href: '#/new' }, 'Start new wallet')) // assumes a single channel per wallet
+  , settledCh$.filter(xs => xs.length).map(a('.btn.btn-default', { href: '#new' }, 'Start new wallet')) // assumes a single channel per wallet
   )
 
 , vtree$ = O.merge(
     O.of(indexView)
-  , provis$.map(loadingView)
-  , assoc$.map(loadingView)
+  , wallet$.filter(w => !w.idpub).map(loadingView)
   , O.combineLatest(wid$, wallet$, balance$, height$, events$, openCh$, settledCh$, canPay$, showLog$, settleBtn$, stateMap$, props$)
+      .filter(([ wid, wallet ]) => !!wallet.idpub)
       .map(walletView)
   )
 
   // Sinks
-  dbgStreams({ wid$, event$, wallet$, height$, openCh$, balance$, cmd$, location$, history$, pay$, showLog$, canPay$, error$, settleBtn$, init$, events$ })
+  dbgStreams({ wid$, event$, wallet$, height$, openCh$, balance$, cmd$, location$, history$, pay$, showLog$, canPay$, error$ })
   return { DOM: vtree$, socket: cmd$, history$: location$, error$ }
 }
 
