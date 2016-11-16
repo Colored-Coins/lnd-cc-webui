@@ -43,7 +43,9 @@ const amountEl  = (amount, asset) => em('.amount', [ span('.num', formatNumber(a
 const renderers = {
   init:  ({ ts }, { wallet }) => ev({
     title: 'Setting up Lightning Wallet...'
-  , meta: [ (wallet.idpub && span('.label.label-success', 'wallet ready')), timestamp(ts) ]
+  , meta: [ wallet.idpub
+            ? span('.label.label-success', 'wallet ready')
+            : span('.label.label-warning', ['setting up… ', spinner ]), timestamp(ts) ]
   })
 
 , ch_init: ({ ts, outpoint, peer, capacity }, { props: { asset }, openCh }, isOpen=~openCh.indexOf(outpoint)) => ev({
