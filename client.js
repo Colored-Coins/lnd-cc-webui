@@ -1,18 +1,15 @@
 import Rx, { Observable as O } from 'rx'
 import { run } from '@cycle/rx-run'
 import io from 'socket.io-client'
-import { makeDOMDriver, div, button, a, span, h } from '@cycle/dom'
+import { makeDOMDriver, button, a, h } from '@cycle/dom'
 import { makeHistoryDriver } from '@cycle/history'
 import { createHashHistory as createHistory } from 'history'
 import { makeSocketDriver, dbgStreams, makeWid } from './util'
 import { reltime } from './views/util'
 
-import loadingView from './views/loading'
 import indexView   from './views/index'
-import headerView  from './views/header'
-import paymentView from './views/payment'
-import eventsView  from './views/events'
-import welcomeView from './views/welcome'
+import loadingView from './views/loading'
+import walletView  from './views/wallet'
 
 import errorDialog from './views/error-dialog'
 
@@ -27,12 +24,13 @@ const main = ({ DOM, history$, socket, props$ }) => {
   // Model
 , wid$     = history$.map(l => l.pathname.replace(/^\//, '')).filter(l => l != 'new').distinctUntilChanged()
 , event$   = socket.events('event', (...e) => e)
-, events$  = event$.scan((events, e) => e[0] == 'init' ? [ e ] : [ e, ...events ], [])
-, wallet$  = O.merge(evStream('wallet', w => w), evStream('init', _ => ({})))
+, init$    = evStream('init')
+, events$  = init$.flatMapLatest(ie => (console.log('new events'),event$.startWith([ 'init', ie ]).scan((events, e) => [ e, ...events ], [])))
+, wallet$  = O.merge(evStream('wallet', w => w), init$.map({}))
 , height$  = O.merge(evStream('chain'), evStream('accept')).map(c => c.height).startWith(0)
 , channel$ = evStream('ch_open', c => c.outpoint).startWith(undefined)
-, openCh$  = channel$.scan((xs, x) => [ ...xs, x ], []).startWith([])
-, settledCh$ = evStream('ch_settle_done').scan((xs, x) => [ ...xs, x.outpoint ], []).startWith([])
+, openCh$  = wid$.flatMapLatest(_ => channel$.scan((xs, x) => [ ...xs, x ], []).startWith([]))
+, settledCh$ = wid$.flatMapLatest(_ => evStream('ch_settle_done').scan((xs, x) => [ ...xs, x.outpoint ], []).startWith([]))
 , balance$ = O.merge(
     wallet$.filter(w => !!w.balance).map(w => w.balance)
   , evStream('balance', b => b.channelbalance)
@@ -60,26 +58,23 @@ const main = ({ DOM, history$, socket, props$ }) => {
 , location$ = wallet$.withLatestFrom(wid$).filter(([ wallet, wid ]) => wallet.wid && wallet.wid != wid).map(([ { wid } ]) => ({ pathname: wid }))
 
 , settleBtn$ = O.merge(
-    channel$.filter(x => !!x).map(button('.settle.btn.btn-default', 'Close channel & settle on-chain'))
+    O.merge(provis$, assoc$).map(button('.btn.btn-default', { disabled: true }, 'Opening wallet…'))
+  , evStream('ch_init').map(button('.btn.btn-default', { disabled: true }, 'Opening channel…'))
+  , channel$.filter(x => !!x).map(button('.settle.btn.btn-default', 'Close channel & settle on-chain'))
   , settle$.map(button('.btn.btn-default', { disabled: true }, 'Closing channel…'))
   , settledCh$.filter(xs => xs.length).map(a('.btn.btn-default', { href: '#/new' }, 'Start new wallet')) // assumes a single channel per wallet
-  ).startWith(button('.btn.btn-default', { disabled: true }, 'Opening channel…'))
+  )
 
-, vtree$ = O.combineLatest(wid$, wallet$, balance$, height$, events$, openCh$, settledCh$, canPay$, showLog$, settleBtn$, stateMap$, props$)
-    .map(([ wid, wallet, balance, height, events, openCh, settledCh, canPay, showLog, settleBtn, stateMap, props ]) => !wallet.idpub ? loadingView() : div([
-      headerView({ wallet, props, balance })
-    , props.showWelcome ? welcomeView : null
-    , paymentView({ wallet, props, canPay })
-    , eventsView({ events, wallet, height, openCh, settledCh, stateMap, props })
-    , div('.container.controls', [
-        settleBtn, ' '
-      , button('.toggle-log.btn.btn-default', showLog ? 'Hide logs' : 'View logs')
-      ])
-    , showLog ? div('.container.rawlog', [ h('iframe', { src: `/rawlog/${ wid }` }) ]) : null
-    ])).startWith(indexView)
+, vtree$ = O.merge(
+    O.of(indexView)
+  , provis$.map(loadingView)
+  , assoc$.map(loadingView)
+  , O.combineLatest(wid$, wallet$, balance$, height$, events$, openCh$, settledCh$, canPay$, showLog$, settleBtn$, stateMap$, props$)
+      .map(walletView)
+  )
 
   // Sinks
-  dbgStreams({ wid$, event$, wallet$, height$, openCh$, balance$, cmd$, location$, history$, pay$, showLog$, canPay$, error$ })
+  dbgStreams({ wid$, event$, wallet$, height$, openCh$, balance$, cmd$, location$, history$, pay$, showLog$, canPay$, error$, settleBtn$, init$, events$ })
   return { DOM: vtree$, socket: cmd$, history$: location$, error$ }
 }
 
