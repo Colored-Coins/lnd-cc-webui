@@ -13,7 +13,7 @@ export const makeWid = _ => randomBytes(32).toString('base64').replace(/\W+/g, '
 export const dbgStreams = streams =>  Object.keys(streams).forEach(k => dbgStream(k, streams[k]))
 
 const dbgStream = (label, o$) => o$.subscribe(
-  x => debug(`${label} ->`, x),
+  x => debug(`${label} ->`, ...[].concat(x)),
   err => debug(`${label} \x1b[91mError:\x1b[0m`, err.stack || err),
   () => debug(`${label} completed`)
 )
