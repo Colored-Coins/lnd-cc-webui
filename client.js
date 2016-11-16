@@ -52,10 +52,12 @@ const main = ({ DOM, history$, socket, props$ }) => {
 , pay$     = DOM.select('.send-payment').events('submit').do(e => e.preventDefault()).withLatestFrom(wid$)
                .map(([ { target: t }, wid ]) => [ 'pay', wid, t.querySelector('[name=dest]').value, t.querySelector('[name=amount]').value ])
 , settle$  = DOM.select('.settle').events('click').withLatestFrom(wid$, channel$, (_, wid, ch) => [ 'settle', wid, ch ])
+
 , cmd$     = O.merge(provis$, assoc$, pay$, settle$)
 
-
 , location$ = wallet$.withLatestFrom(wid$).filter(([ wallet, wid ]) => wallet.wid && wallet.wid != wid).map(([ { wid } ]) => ({ pathname: wid }))
+
+, notif$ = evStream('warn', e => ({ message: e.msg, settings: { type: 'danger' } }))
 
 , settleBtn$ = O.merge(
     O.merge(provis$, assoc$).map(button('.btn.btn-default', { disabled: true }, 'Opening wallet…'))
@@ -75,15 +77,16 @@ const main = ({ DOM, history$, socket, props$ }) => {
 
   // Sinks
   dbgStreams({ wid$, event$, wallet$, height$, openCh$, balance$, cmd$, location$, history$, pay$, showLog$, canPay$, error$ })
-  return { DOM: vtree$, socket: cmd$, history$: location$, error$ }
+  return { DOM: vtree$, socket: cmd$, history$: location$, error$, notif$ }
 }
 
 run(main, {
   DOM:      makeDOMDriver('#app')
 , socket:   makeSocketDriver(io(location.origin, { transports: [ 'websocket' ] }))
 , history$: makeHistoryDriver(createHistory({ hashType: 'noslash' }))
-, props$:   _ => O.just({ asset: 'USD', showWelcome: !localStorage.getItem('shown_welcome') })
-, error$:   err$ => (err$.subscribe(errorDialog), O.empty())
+, props$: _ => O.just({ asset: 'USD', showWelcome: !localStorage.getItem('shown_welcome') })
+, error$: err$ => (err$.subscribe(errorDialog), O.empty())
+, notif$: msg$ => msg$.subscribe(msg => $.notify(msg, msg.settings||{}))
 })
 
 localStorage.setItem('shown_welcome', true)
