@@ -2,7 +2,7 @@ module.exports = error => {
   let title, message, buttons
 
   if (error === 'Service Unavailable') {
-    title = 'Whoa, people really liked this demo!'
+    title = 'Whoa, people are really liking this demo!'
     message = '<p>Unfortunately, we reached our maximum capacity of concurrent users - this won\'t be limited in the final release. Please try this demo again very soon!</p>'
     buttons = '<a href="#new" class="btn btn-primary">Try again</a>'
   } else {
