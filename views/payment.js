@@ -18,5 +18,5 @@ module.exports = ({ wallet: { idpub }, props: { asset }, canPay }) =>
         input('.btn.btn-primary.btn-block.btn-lg', { type: 'submit', value: 'Pay', disabled: !canPay })
       ])
     ])
-  , p('.text-muted.your-id', ['Your Lightning ID: ', strong('.lnid', idpub)])
+  , idpub ? p('.text-muted.your-id', ['Your Lightning ID: ', strong('.lnid', idpub)]) : null
   ])
