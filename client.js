@@ -8,6 +8,7 @@ import { makeSocketDriver, dbgStreams, makeWid } from './util'
 import { reltime } from './views/util'
 
 import loadingView from './views/loading'
+import indexView   from './views/index'
 import headerView  from './views/header'
 import paymentView from './views/payment'
 import eventsView  from './views/events'
@@ -24,11 +25,11 @@ const main = ({ DOM, history$, socket, props$ }) => {
   evStream = (t, mapper=ID) => event$.filter(x => x[0] == t).map(x => mapper(...x.slice(1)))
 
   // Model
-, wid$     = history$.map(l => l.pathname.replace(/^\//, '')).distinctUntilChanged()
+, wid$     = history$.map(l => l.pathname.replace(/^\//, '')).filter(l => l != 'new').distinctUntilChanged()
 , event$   = socket.events('event', (...e) => e)
 , events$  = event$.scan((events, e) => e[0] == 'init' ? [ e ] : [ e, ...events ], [])
-, wallet$  = O.merge(evStream('wallet', w => w), evStream('init', _ => ({}))).startWith({})
-, height$  = evStream('accept', c => c.height).startWith(0)
+, wallet$  = O.merge(evStream('wallet', w => w), evStream('init', _ => ({})))
+, height$  = O.merge(evStream('chain'), evStream('accept')).map(c => c.height).startWith(0)
 , channel$ = evStream('ch_open', c => c.outpoint).startWith(undefined)
 , openCh$  = channel$.scan((xs, x) => [ ...xs, x ], []).startWith([])
 , settledCh$ = evStream('ch_settle_done').scan((xs, x) => [ ...xs, x.outpoint ], []).startWith([])
@@ -41,26 +42,27 @@ const main = ({ DOM, history$, socket, props$ }) => {
   ).startWith('0').distinctUntilChanged()
 , stateMap$  = evStream('accept').scan((o, c) => (o[c.height]=c, o), {}).startWith({})
 , canPay$    = balance$.map(b => b > 0)
+, showLog$   = DOM.select('.toggle-log').events('click').scan(s => !s).startWith(false)
 , error$     = evStream('error')
 
 
   // Intent
-, provis$  = wid$.filter(wid => !wid).map([ 'provision' ])
-, assoc$   = wid$.withLatestFrom(wallet$).filter(([ wid, wallet]) => wid && wallet.wid != wid).map(([ wid ]) => wid)
+, provis$  = history$.filter(l => l.pathname == '/new').map([ 'provision' ])
+, assoc$   = wid$.withLatestFrom(wallet$.startWith({})).filter(([ wid, wallet]) => wid && wallet.wid != wid).map(([ wid ]) => wid)
              .merge(socket.events('reconnect').withLatestFrom(wid$, (_, wid) => wid).filter(wid => !!wid))
              .map(wid => [ 'associate', wid ])
 , pay$     = DOM.select('.send-payment').events('submit').do(e => e.preventDefault()).withLatestFrom(wid$)
                .map(([ { target: t }, wid ]) => [ 'pay', wid, t.querySelector('[name=dest]').value, t.querySelector('[name=amount]').value ])
 , settle$  = DOM.select('.settle').events('click').withLatestFrom(wid$, channel$, (_, wid, ch) => [ 'settle', wid, ch ])
 , cmd$     = O.merge(provis$, assoc$, pay$, settle$)
-, showLog$ = DOM.select('.toggle-log').events('click').scan(s => !s).startWith(false)
+
 
 , location$ = wallet$.withLatestFrom(wid$).filter(([ wallet, wid ]) => wallet.wid && wallet.wid != wid).map(([ { wid } ]) => ({ pathname: wid }))
 
 , settleBtn$ = O.merge(
     channel$.filter(x => !!x).map(button('.settle.btn.btn-default', 'Close channel & settle on-chain'))
   , settle$.map(button('.btn.btn-default', { disabled: true }, 'Closing channel…'))
-  , settledCh$.filter(xs => xs.length).map(a('.btn.btn-default', { href: '/' }, 'Start new wallet')) // assumes a single channel per wallet
+  , settledCh$.filter(xs => xs.length).map(a('.btn.btn-default', { href: '#/new' }, 'Start new wallet')) // assumes a single channel per wallet
   ).startWith(button('.btn.btn-default', { disabled: true }, 'Opening channel…'))
 
 , vtree$ = O.combineLatest(wid$, wallet$, balance$, height$, events$, openCh$, settledCh$, canPay$, showLog$, settleBtn$, stateMap$, props$)
@@ -74,10 +76,10 @@ const main = ({ DOM, history$, socket, props$ }) => {
       , button('.toggle-log.btn.btn-default', showLog ? 'Hide logs' : 'View logs')
       ])
     , showLog ? div('.container.rawlog', [ h('iframe', { src: `/rawlog/${ wid }` }) ]) : null
-    ]))
+    ])).startWith(indexView)
 
   // Sinks
-  dbgStreams({ wid$, event$, wallet$, height$, openCh$, balance$, cmd$, location$, history$, pay$, showLog$, canPay$, settleBtn$, error$ })
+  dbgStreams({ wid$, event$, wallet$, height$, openCh$, balance$, cmd$, location$, history$, pay$, showLog$, canPay$, error$ })
   return { DOM: vtree$, socket: cmd$, history$: location$, error$ }
 }
 
@@ -96,12 +98,3 @@ setInterval(_ =>
   Array.prototype.forEach.call(document.querySelectorAll('.reltime'), el =>
       el.innerText = reltime(el.getAttribute('title')))
 , 5000)
-
-    /*.map(([ point, height, balance, bench, props ]) => div([*/
-      //balance ? pre(JSON.stringify(balance, '\t', 2)) : null
-    //, [ 1, 5, 10 ].map(value => [ button('.pay', { value }, `Send ${value} ${props.asset}`), ' ' ])
-    //, br(), br()
-    //, button('.settle', 'Settle on-chain')
-    //, (point && height) ? [' ', small(null, `commitment #${ height } on ChannelPoint(${ point }) `) ] : null
-    //, bench ? [ br(), p(small(null, `benchmark: ${bench}`))] : null
-    /*]))*/

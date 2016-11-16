@@ -13,7 +13,7 @@ module.exports = error =>
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-default" data-dismiss="modal">Close dialog</button>
-          <a href="/" class="btn btn-primary">Try a new wallet</a>
+          <a href="#/new" class="btn btn-primary">Try a new wallet</a>
         </div>
       </div>
     </div>
